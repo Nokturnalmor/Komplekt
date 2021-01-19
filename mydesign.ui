@@ -26,13 +26,18 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
-         <widget class="QTableWidget" name="table_potok"/>
+         <widget class="QTableWidget" name="table_potok">
+          <property name="styleSheet">
+           <string notr="true">selection-color: rgb(14, 18, 255);
+selection-background-color: rgb(0, 255, 59);</string>
+          </property>
+         </widget>
         </item>
         <item>
          <widget class="QTableWidget" name="table_bd_rab_c_potok"/>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton">
+         <widget class="QPushButton" name="push_dvijenie">
           <property name="minimumSize">
            <size>
             <width>0</width>
@@ -46,6 +51,42 @@
           </property>
           <property name="text">
            <string>Движение</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="push_rasform">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>14</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Расформировать</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="push_vydat">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>14</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Выдать</string>
           </property>
          </widget>
         </item>
@@ -119,34 +160,6 @@
             <width>0</width>
             <height>444</height>
            </size>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-      <widget class="QWidget" name="tab_3">
-       <attribute name="title">
-        <string>Расформирование</string>
-       </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_3">
-        <item>
-         <widget class="QTableWidget" name="table_potok_rasform"/>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pushButton_2">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>40</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>14</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>Расформировать</string>
           </property>
          </widget>
         </item>
