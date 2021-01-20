@@ -35,7 +35,7 @@ class mywindow(QtWidgets.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
-
+        self.setWindowTitle("Диспетчирование")
         #self.resized.connect(self.widths)
 
         tabl_mk = self.ui.table_bd_mk
@@ -242,6 +242,33 @@ class mywindow(QtWidgets.QMainWindow):
                                 break
         return spisok
 
+    def tek_tara_rc(self,spisok,nom_mk):
+        bd_arh_tar = F.otkr_f(F.tcfg('arh_tar'),separ='|')
+        for i in bd_arh_tar:
+            if i[3] == nom_mk:
+                sost = i[6]
+                nom = i[0]
+                marsh = i[8]
+                det_tmp = F.otkr_f(F.scfg('bd_tara') + os.sep + nom + '.txt',separ='|')
+                for i in range(0,len(det_tmp)):
+                    for j in range(1,len(spisok)):
+                        if det_tmp[i][1].strip() == spisok[j][3].strip() and det_tmp[i][2].strip() == spisok[j][4].strip():
+                            polojenie = self.tek_rc(marsh)
+                            spisok[j][7] = polojenie
+                            if sost == 'выдано':
+                                spisok[j][6] = 'выдано'
+                            if sost == 'открыта':
+                                spisok[j][6] = nom
+                            if sost == 'закрыта':
+                                spisok[j][6] = ''
+                            break
+        return spisok
+
+    def tek_rc(self,marsh):
+        arr = marsh.split('-->')
+        tmp = arr[-1].split('$')
+        return tmp[-1]
+
     def zagruz_det_iz_mk(self):
         tabl_mk = self.ui.table_bd_mk
         tabl_det = self.ui.table_sod_mk
@@ -252,7 +279,7 @@ class mywindow(QtWidgets.QMainWindow):
         max_dop_dlina = 0
         for i in range(0, len(spis)):
             dop_dlina = 0
-            tmp = ['','','',spis[i][0],spis[i][1],spis[i][2],spis[i][3],spis[i][4],spis[i][5],spis[i][6],spis[i][7],spis[i][8]]
+            tmp = ['','','',spis[i][0],spis[i][1],spis[i][2],"","",spis[i][3],spis[i][4],spis[i][5],spis[i][6],spis[i][7],spis[i][8]]
 
             for j in range(9, len(spis[0])):
                 if spis[0][j] == 'комплектация' and spis[i][j-1] != "":
@@ -264,13 +291,14 @@ class mywindow(QtWidgets.QMainWindow):
                 max_dop_dlina = dop_dlina
         for i in range(0,max_dop_dlina):
             s[0].append('')
-        s[0][0] = 'Факт. кол.'
-        s[0][1] = 'Дост. кол.'
+        s[0][0] = 'Факт.кол.'
+        s[0][1] = 'Дост.кол.'
         s[0][2] = 'Выдано'
-
+        s[0][6] = 'Тара'
+        s[0][7] = 'Тек.РЦ'
         nom_mk = tabl_mk.item(tabl_mk.currentRow(), 0).text()
         s = self.dost_ostatok_det(s,nom_mk)
-
+        s = self.tek_tara_rc(s,nom_mk)
         ed_kol = {0}
         F.zapoln_wtabl(self, s, tabl_det, 0, ed_kol,'', '', isp_shapka=True, separ='')
         tabl_det.setSelectionMode(1)
@@ -284,6 +312,7 @@ class mywindow(QtWidgets.QMainWindow):
 app = QtWidgets.QApplication([])
 
 myappid = 'Powerz.BAG.SustControlWork.0.0.0'  # !!!
+
 QtWin.setCurrentProcessExplicitAppUserModelID(myappid)
 app.setWindowIcon(QtGui.QIcon(os.path.join("icons", "icon.png")))
 

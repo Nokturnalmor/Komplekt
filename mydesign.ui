@@ -68,7 +68,7 @@ selection-background-color: rgb(0, 255, 59);</string>
            </font>
           </property>
           <property name="text">
-           <string>Расформировать</string>
+           <string>Расформировать в текущем РЦ</string>
           </property>
          </widget>
         </item>
