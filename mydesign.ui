@@ -24,7 +24,7 @@
        <attribute name="title">
         <string>Поток</string>
        </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_2">
+       <layout class="QVBoxLayout" name="verticalLayout_4">
         <item>
          <widget class="QTableWidget" name="table_potok">
           <property name="styleSheet">
@@ -34,60 +34,94 @@ selection-background-color: rgb(0, 255, 59);</string>
          </widget>
         </item>
         <item>
-         <widget class="QTableWidget" name="table_bd_rab_c_potok"/>
-        </item>
-        <item>
-         <widget class="QPushButton" name="push_dvijenie">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>40</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>14</pointsize>
-           </font>
-          </property>
-          <property name="text">
+         <widget class="QGroupBox" name="groupBox">
+          <property name="title">
            <string>Движение</string>
           </property>
+          <layout class="QVBoxLayout" name="verticalLayout_2">
+           <item>
+            <widget class="QTableWidget" name="table_bd_rab_c_potok"/>
+           </item>
+           <item>
+            <widget class="QPushButton" name="push_dvijenie">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>40</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>14</pointsize>
+              </font>
+             </property>
+             <property name="text">
+              <string>Движение</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="push_rasform">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>40</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>14</pointsize>
+              </font>
+             </property>
+             <property name="text">
+              <string>Расформировать в текущем РЦ</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="push_rasform">
-          <property name="minimumSize">
+         <widget class="QGroupBox" name="groupBox_2">
+          <property name="maximumSize">
            <size>
-            <width>0</width>
-            <height>40</height>
+            <width>16777215</width>
+            <height>110</height>
            </size>
           </property>
-          <property name="font">
-           <font>
-            <pointsize>14</pointsize>
-           </font>
+          <property name="title">
+           <string>Выдача</string>
           </property>
-          <property name="text">
-           <string>Расформировать в текущем РЦ</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="push_vydat">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>40</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>14</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>Выдать</string>
-          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_3">
+           <item>
+            <widget class="QTableWidget" name="table_obsh_marshrut">
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>40</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="push_vydat">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>40</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>14</pointsize>
+              </font>
+             </property>
+             <property name="text">
+              <string>Выдать</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </widget>
         </item>
        </layout>
@@ -160,6 +194,9 @@ selection-background-color: rgb(0, 255, 59);</string>
             <width>0</width>
             <height>444</height>
            </size>
+          </property>
+          <property name="sortingEnabled">
+           <bool>true</bool>
           </property>
          </widget>
         </item>

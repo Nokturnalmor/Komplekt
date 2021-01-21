@@ -66,6 +66,7 @@ class mywindow(QtWidgets.QMainWindow):
 
         tabl_det = self.ui.table_sod_mk
         F.ust_cvet_videl_tab(tabl_det)
+        tabl_det.doubleClicked.connect(self.dblclk_tab_det)
 
         tabl_potok = self.ui.table_potok
         self.obn_potok()
@@ -79,6 +80,14 @@ class mywindow(QtWidgets.QMainWindow):
         tabl_rc_potok.setSelectionMode(1)
         F.ust_cvet_videl_tab(tabl_rc_potok)
         tabl_potok.doubleClicked.connect(self.spis_det_tar)
+        tabl_potok.clicked.connect(self.obn_ob_mar)
+
+        tabl_ob_mar = self.ui.table_obsh_marshrut
+        #tabl_potok.setSelectionBehavior(1)
+        tabl_ob_mar.setSelectionMode(1)
+        F.ust_cvet_videl_tab(tabl_ob_mar)
+        tabl_ob_mar.verticalHeader().setVisible(False)
+        tabl_ob_mar.horizontalHeader().setVisible(False)
 
         but_cr_tar = self.ui.push_create_tar
         but_cr_tar.clicked.connect(self.ct_tar)
@@ -92,35 +101,191 @@ class mywindow(QtWidgets.QMainWindow):
         but_vydat = self.ui.push_vydat
         but_vydat.clicked.connect(self.vydat)
 
+        tab = self.ui.tabWidget
+        tab.tabBarClicked.connect(self.tab_click)
+
+    def tab_click(self):
+        tab = self.ui.tabWidget
+        if tab.currentIndex() == 0:
+            self.zagruz_det_iz_mk()
+
+    def dblclk_tab_det(self):
+        tabl_det = self.ui.table_sod_mk
+        r = tabl_det.currentRow()
+        k = tabl_det.currentColumn()
+        if k == 6:
+            self.sost_tary_iz_mk(r,k)
+
+    def sost_tary_iz_mk(self,r,c):
+        tabl_det = self.ui.table_sod_mk
+        tabl_mk = self.ui.table_bd_mk
+        naim = tabl_det.item(r,3).text().strip()
+        nn = tabl_det.item(r,4).text().strip()
+        nom_mk = tabl_mk.item(tabl_mk.currentRow(),0).text()
+        bd_arh_tar = F.otkr_f(F.tcfg('arh_tar'), separ='|')
+        s=''
+        for i in bd_arh_tar:
+            if i[3] == nom_mk:
+                sost = i[6]
+                nom = i[0]
+                marsh = i[9]
+                nazv = i[5]
+                det_tmp = F.otkr_f(F.scfg('bd_tara') + os.sep + nom + '.txt', separ='|')
+                for i in range(0, len(det_tmp)):
+                    if det_tmp[i][1].strip() == naim and det_tmp[i][2].strip() == nn:
+                        s+= sost + ' ' + nom + ' ' + nazv + '\n' + marsh + '\n' + '\n'
+        showDialog(self, s)
+        return
+
+    def obn_ob_mar(self):
+        tabl_ob_mar = self.ui.table_obsh_marshrut
+        tabl_potok = self.ui.table_potok
+        nom_mk = tabl_potok.item(tabl_potok.currentRow(), 3).text()
+        if F.nalich_file(F.scfg('bd_mk') + os.sep + nom_mk + '.txt') == False:
+            showDialog(self, 'Не найти файл ' + F.scfg('bd_mk') + os.sep + nom_mk + '.txt')
+            return
+        spis_mk = F.otkr_f(F.scfg('bd_mk') + os.sep + nom_mk + '.txt', separ="|")
+        ss= []
+        s=[]
+        for i in range(11, len(spis_mk[0]),4):
+            ss.append(spis_mk[0][i])
+        s.append(ss)
+        F.zapoln_wtabl(self,s,tabl_ob_mar,0,0,"","",100,False,"")
+
+
+
     def spis_det_tar(self):
         tabl_potok = self.ui.table_potok
         tabl_rc_potok = self.ui.table_bd_rab_c_potok
         if tabl_potok.currentRow() == None or tabl_potok.currentRow() == -1:
             showDialog(self, 'Не выбрана тара')
             return
+        nom_mk = tabl_potok.item(tabl_potok.currentRow(), 3).text()
         nom_tar = tabl_potok.item(tabl_potok.currentRow(), 0).text()
         spis = F.otkr_f(F.scfg('bd_tara') + os.sep + nom_tar + '.txt', separ="|")
+        sp_det_mar = self.spis_det_s_ih_marsh(nom_mk)
         s = 'Список деталей в ' + tabl_potok.item(tabl_potok.currentRow(), 5).text()  + ' №' + nom_tar + ":" + '\n'
         for i in spis:
-            s = s + i[1] + ' ' + i[2] + ' ' + i[0] + 'шт.' + '\n'
+            mar_tmp = []
+            for j in range(len(sp_det_mar)):
+                if sp_det_mar[j][3].strip() == i[1] and sp_det_mar[j][4].strip() == i[2]:
+                    for k in range(16, len(sp_det_mar[j])):
+                        mar_tmp.append(sp_det_mar[j][k])
+                    break
+            mar_tmp = '-->'.join(mar_tmp)
+            s = s + i[1] + ' ' + i[2] + ' ' + i[0] + 'шт. Маршрут: ' + mar_tmp + '\n'
         showDialog(self,'*скопирован в буфер.\n' + s)
         F.copy_bufer(s)
 
+    def spis_det_s_ih_marsh(self,nom_mk):
+        spis = F.otkr_f(F.scfg('bd_mk') + os.sep + nom_mk + '.txt', separ="|")
+        s = []
+        max_dop_dlina = 0
+        for i in range(0, len(spis)):
+            dop_dlina = 0
+            tmp = ['', '', '', spis[i][0], spis[i][1], spis[i][2], "", "", spis[i][3], spis[i][4], spis[i][5],
+                   spis[i][6], spis[i][7], spis[i][8], spis[i][9], spis[i][10]]
+
+            for j in range(11, len(spis[0])):
+                if spis[0][j] == 'комплектация' and spis[i][j - 1] != "":
+                    if i > 0:
+                        tmp.append(spis[0][j - 1])
+                        dop_dlina += 1
+            s.append(tmp)
+            if dop_dlina > max_dop_dlina:
+                max_dop_dlina = dop_dlina
+        for i in range(0, max_dop_dlina):
+            s[0].append('')
+        return s
+
+    def vse_det_v_odin_rc(self,nom_mk,nom_tar,rc):
+        s = self.spis_det_s_ih_marsh(nom_mk)
+        spis_tar = F.otkr_f(F.scfg('bd_tara') + os.sep + nom_tar + '.txt', separ='|')
+
+        for i in range(len(spis_tar)):
+            flag_rc = False
+            for j in range(len(s)):
+                if spis_tar[i][1].strip() == s[j][3].strip() and spis_tar[i][2].strip() == s[j][4].strip():
+                    for k in range(15,len(s[j])):
+                        if rc == s[j][k]:
+                            flag_rc = True
+                            break
+                    break
+            if flag_rc == False:
+                return False
+        return True
+
     def vydat(self):
+        tabl_ob_mar = self.ui.table_obsh_marshrut
         tabl_potok = self.ui.table_potok
         tabl_rc_potok = self.ui.table_bd_rab_c_potok
         if tabl_potok.currentRow() == None or tabl_potok.currentRow() == -1:
             showDialog(self, 'Не выбрана тара')
             return
+        if tabl_ob_mar.currentRow() == None or tabl_ob_mar.currentRow() == -1:
+            showDialog(self, 'Не выбран РЦ')
+            return
         nom_tar = tabl_potok.item(tabl_potok.currentRow(), 0).text()
+        nom_mk = tabl_potok.item(tabl_potok.currentRow(), 3).text()
+        rc = tabl_ob_mar.item(0, tabl_ob_mar.currentColumn()).text()
+
+        if self.vse_det_v_odin_rc(nom_mk,nom_tar,rc) == False:
+            showDialog(self, 'Не все детали в таре ' + nom_tar + " имеют общий РЦ :" + rc)
+            return
         sp_tar = F.otkr_f(F.tcfg('arh_tar'), separ='|')
         for i in range(0, len(sp_tar)):
             if sp_tar[i][0] == nom_tar:
+                if rc != self.tek_rc(sp_tar[i][9]):
+                    showDialog(self, 'Нельзя выдать в ' + rc + ", т.к. тара находится в " + self.tek_rc(sp_tar[i][9]))
+                    return
                 sp_tar[i][6] = 'выдано'
+                sp_tar[i][7] = str(tabl_ob_mar.currentColumn())
                 break
+        self.uchet_komplektacii(sp_tar,nom_tar,nom_mk,rc,tabl_ob_mar.currentColumn())
         F.zap_f(F.tcfg('arh_tar'), sp_tar, '|')
         self.obn_potok()
+        showDialog(self, 'Выдача записана успешно')
         return
+
+    def uchet_komplektacii(self,spis_arh_tar,nom_tar,nom_mk,rc,nomer_rc):
+        spis_mk = F.otkr_f(F.scfg('bd_mk') + os.sep + nom_mk + '.txt', separ="|")
+        spis_tar = F.otkr_f(F.scfg('bd_tara') + os.sep + nom_tar + '.txt',separ='|')
+
+        for i in range(len(spis_tar)):
+            for j in range(len(spis_mk)):
+                if spis_tar[i][1].strip() == spis_mk[j][0].strip() and spis_tar[i][2].strip() == spis_mk[j][1].strip():
+                    kol_vyd = 0
+                    for k in range(len(spis_arh_tar)):
+                        if spis_arh_tar[k][3] == nom_mk and spis_arh_tar[k][6] == 'выдано' and str(nomer_rc) == spis_arh_tar[k][7]:
+                            if self.tek_rc(spis_arh_tar[k][9]) == rc:
+                                spis_tar_tmp = F.otkr_f(F.scfg('bd_tara') + os.sep + spis_arh_tar[k][0] + '.txt', separ='|')
+                                for l in range(len(spis_tar_tmp)):
+                                    if spis_tar_tmp[l][3].strip() == spis_mk[j][6].strip():
+                                        kol_vyd+= int(spis_tar_tmp[l][0])
+                    '''n = nomer_rc
+                    nomer_rc_v_mk = -1
+                    for k in range(11, len(spis_mk[j]),4):
+                        if spis_mk[j][k] != '':
+                            n-=1
+                        if n == -1:
+                            nomer_rc_v_mk = k+1
+                            break
+                    if nomer_rc_v_mk == -1:
+                        
+                        showDialog(self,
+                                   'Не найден в МК для ДСЕ ' + spis_mk[j][0].strip() + ' ' + spis_mk[j][1].strip() +
+                                    ' порядковый номер РЦ ' + str(nomer_rc))
+                        return'''
+                    nomer_rc_v_mk = 10 + 4 * (nomer_rc + 1) - 2
+                    if kol_vyd == int(spis_mk[j][2]):
+                        spis_mk[j][nomer_rc_v_mk] = str(kol_vyd) + ' шт. (полный компл.)'
+                    elif kol_vyd < int(spis_mk[j][2]):
+                        if kol_vyd//int(spis_mk[j][7]) > 1:
+                            spis_mk[j][nomer_rc_v_mk] = str(kol_vyd) + ' шт. (' + str(
+                                int(kol_vyd//int(spis_mk[j][7]))) + 'компл.)'
+        F.zap_f(F.scfg('bd_mk') + os.sep + nom_mk + '.txt',spis_mk,'|')
+        return
+
 
     def rasformirovat(self):
         tabl_potok = self.ui.table_potok
@@ -133,6 +298,7 @@ class mywindow(QtWidgets.QMainWindow):
         for i in range(0, len(sp_tar)):
             if sp_tar[i][0] == nom_tar:
                 sp_tar[i][6] = 'закрыта'
+                sp_tar[i][4] = F.now()
                 break
         F.zap_f(F.tcfg('arh_tar'), sp_tar, '|')
         self.obn_potok()
@@ -154,7 +320,7 @@ class mywindow(QtWidgets.QMainWindow):
         sp_tar = F.otkr_f(F.tcfg('arh_tar'), separ='|')
         for i in range(0, len(sp_tar)):
             if sp_tar[i][0] == nom_tar:
-                sp_tar[i][8] = sp_tar[i][8] + "-->" + dop
+                sp_tar[i][9] = sp_tar[i][9] + "-->" + dop
                 break
         F.zap_f(F.tcfg('arh_tar'),sp_tar,'|')
         self.obn_potok()
@@ -167,6 +333,7 @@ class mywindow(QtWidgets.QMainWindow):
         tabl_tar = self.ui.table_bd_tara
         tabl_det = self.ui.table_sod_mk
         text_prim = self.ui.line_prim_cr_tar
+        rab_c = tabl_rc.item(tabl_rc.currentRow(), 0).text()
         if tabl_rc.currentRow() == None or tabl_rc.currentRow() == -1:
             showDialog(self,'Не выбран рабочий центр')
             return
@@ -186,9 +353,14 @@ class mywindow(QtWidgets.QMainWindow):
                     return
                 if int(spis[i][0]) > int(spis[i][1]):
                     showDialog(self, 'Кол-во деталей ' +  spis[i][3] + ' '  + spis[i][4] +
-                               '  превышает доступное ' + spis[i][1])
+                                   '  превышает доступное ' + spis[i][1])
                     return
-                s.append([spis[i][0],spis[i][3].strip(),spis[i][4].strip()])
+                if spis[i][7] != '':
+                    if rab_c != spis[i][7]:
+                        showDialog(self, 'ДСЕ не находится на ' + rab_c)
+                        return
+
+                s.append([spis[i][0],spis[i][3].strip(),spis[i][4].strip(),spis[i][11].strip()])
         if len(s) == 0:
             showDialog(self, 'Не выбраны детали')
             return
@@ -197,10 +369,10 @@ class mywindow(QtWidgets.QMainWindow):
         nom = int(sp_tar[len(sp_tar) - 1][0]) + 1
         nom = '0' * (8 - len(str(nom))) + str(nom)
         vid_tar = tabl_tar.item(tabl_tar.currentRow(),0).text()
-        rab_c = tabl_rc.item(tabl_rc.currentRow(),0).text()
+
         nom_mk = tabl_mk.item(tabl_mk.currentRow(),0).text()
 
-        sp_tar.append([nom,F.tek_polz(),F.date(2),nom_mk,'',vid_tar,'открыта',text_prim.text(),F.tek_polz()+"$"+F.now()+"$"+rab_c])
+        sp_tar.append([nom,F.tek_polz(),F.date(2),nom_mk,'',vid_tar,'открыта',"",text_prim.text(),F.tek_polz()+"$"+F.now()+"$"+rab_c])
         F.zap_f(F.tcfg('arh_tar'),sp_tar,'|')
         F.zap_f(F.scfg('bd_tara')+ os.sep + nom + '.txt',s,'|')
         tabl_det.clear()
@@ -235,11 +407,16 @@ class mywindow(QtWidgets.QMainWindow):
                     det_tmp = F.otkr_f(F.scfg('bd_tara') + os.sep + nom + '.txt',separ='|')
                     for i in range(0,len(det_tmp)):
                         for j in range(1,len(spisok)):
-                            if det_tmp[i][1].strip() == spisok[j][3].strip() and det_tmp[i][2].strip() == spisok[j][4].strip():
-                                spisok[j][1] = int( spisok[j][1]) - int(det_tmp[i][0])
+                            if det_tmp[i][3].strip() == spisok[j][11].strip():
+                                if sost == 'открыта':
+                                    spisok[j][1] = int(spisok[j][1]) - int(det_tmp[i][0])
                                 if sost == 'выдано':
+
                                     spisok[j][2] = int(spisok[j][2]) + int(det_tmp[i][0])
                                 break
+                    for j in range(1, len(spisok)):
+                        if int(spisok[j][2])>int(spisok[j][5]):
+                            spisok[j][2] = int(spisok[j][2]) % int(spisok[j][5])
         return spisok
 
     def tek_tara_rc(self,spisok,nom_mk):
@@ -248,7 +425,7 @@ class mywindow(QtWidgets.QMainWindow):
             if i[3] == nom_mk:
                 sost = i[6]
                 nom = i[0]
-                marsh = i[8]
+                marsh = i[9]
                 det_tmp = F.otkr_f(F.scfg('bd_tara') + os.sep + nom + '.txt',separ='|')
                 for i in range(0,len(det_tmp)):
                     for j in range(1,len(spisok)):
@@ -272,25 +449,12 @@ class mywindow(QtWidgets.QMainWindow):
     def zagruz_det_iz_mk(self):
         tabl_mk = self.ui.table_bd_mk
         tabl_det = self.ui.table_sod_mk
+        tabl_det.sortByColumn(-1,0)
+        if tabl_mk.currentRow() == -1:
+            return
 
         nom = tabl_mk.item(tabl_mk.currentRow(),0).text()
-        spis = F.otkr_f(F.scfg('bd_mk')+os.sep + nom+ '.txt',separ="|")
-        s = []
-        max_dop_dlina = 0
-        for i in range(0, len(spis)):
-            dop_dlina = 0
-            tmp = ['','','',spis[i][0],spis[i][1],spis[i][2],"","",spis[i][3],spis[i][4],spis[i][5],spis[i][6],spis[i][7],spis[i][8]]
-
-            for j in range(9, len(spis[0])):
-                if spis[0][j] == 'комплектация' and spis[i][j-1] != "":
-                    if i > 0:
-                        tmp.append(spis[0][j-1])
-                        dop_dlina+=1
-            s.append(tmp)
-            if dop_dlina > max_dop_dlina:
-                max_dop_dlina = dop_dlina
-        for i in range(0,max_dop_dlina):
-            s[0].append('')
+        s = self.spis_det_s_ih_marsh(nom)
         s[0][0] = 'Факт.кол.'
         s[0][1] = 'Дост.кол.'
         s[0][2] = 'Выдано'
@@ -307,7 +471,21 @@ class mywindow(QtWidgets.QMainWindow):
                 F.dob_color_wtab(tabl_det,i,j,16,16,16)
             if i > 0 and int(s[i][2]) == int(s[i][5]):
                 F.dob_color_wtab(tabl_det, i-1, 0, 16, 16, 16)
-                #tabl_det.item().background().color().rgb(QtGui.QColor.red())
+        spis_mk = F.otkr_f(F.scfg('bd_mk') + os.sep + nom_mk + '.txt', separ="|")
+        for i in range(1,len(spis_mk)):
+            koef = 0
+            for j in range(12,len(spis_mk[i]),4):
+                if spis_mk[i][j-1] == '':
+                    koef+=1
+                if spis_mk[i][j] != '':
+                    if '(полный компл.)' in spis_mk[i][j]:
+                        F.ust_color_wtab(tabl_det, i - 1, 16 -koef+ (j- 12)/4 , 0, 254, 0)
+
+                    else:
+                        F.ust_color_wtab(tabl_det, i - 1, 16 -koef+ (j - 12) / 4, 254, 115, 0)
+        tabl_det.setColumnHidden(11,True)
+
+
 
 app = QtWidgets.QApplication([])
 
