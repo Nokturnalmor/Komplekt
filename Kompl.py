@@ -115,6 +115,56 @@ class mywindow(QtWidgets.QMainWindow):
         k = tabl_det.currentColumn()
         if k == 6:
             self.sost_tary_iz_mk(r,k)
+        if k > 14:
+            self.spis_op_iz_mk(r,k)
+
+    def spis_op_iz_mk(self,r,c):
+        tabl_det = self.ui.table_sod_mk
+        tabl_mk = self.ui.table_bd_mk
+        id = tabl_det.item(r,11).text().strip()
+        naim = tabl_det.item(r,3).text().strip()
+        nn = tabl_det.item(r,4).text().strip()
+        nom_mk = tabl_mk.item(tabl_mk.currentRow(), 0).text()
+        n_rc = tabl_det.item(r,c).text().strip()
+        if F.nalich_file(F.scfg('bd_mk') + os.sep + nom_mk + '.txt') == False:
+            showDialog(self, 'Не найти файл ' + F.scfg('bd_mk') + os.sep + nom_mk + '.txt')
+            return
+        spis_mk = F.otkr_f(F.scfg('bd_mk') + os.sep + nom_mk + '.txt', separ="|")
+        for i in range(1,len(spis_mk)):
+            if spis_mk[i][6] == id:
+                for j in range(11, len(spis_mk[0])):
+                    if spis_mk[i][j] != '' and spis_mk[0][j] == n_rc:
+                        tmp = spis_mk[i][j].split('$')
+                        sp_op = tmp[-1].split(';')
+                        if F.nalich_file(F.tcfg('BD_dse')) == False:
+                            showDialog(self, 'Не найден BD_dse')
+                            return
+                        sp_dse = F.otkr_f(F.tcfg('BD_dse'), False, '|')
+
+                        for i in range(0, len(sp_dse)):
+                            if sp_dse[i][0] == nn and sp_dse[i][1] == naim:
+                                nom_tk = sp_dse[i][2]
+                                if nom_tk == '':
+                                    showDialog(self, 'Не найден номер ТК')
+                                    return
+                                break
+                        if F.nalich_file(F.scfg('add_docs') + os.sep + nom_tk + '_' + nn + '.txt') == False:
+                            showDialog(self, 'Не найден файл ТК')
+                            return
+                        sp_tk = F.otkr_f(F.scfg('add_docs') + os.sep + nom_tk + '_' + nn + '.txt', False, "|")
+                        msgg = ''
+                        for o1 in sp_op:
+                            msgg += str(o1) + ': '
+                            for i in range(11, len(sp_tk)):
+                                if sp_tk[i][3].startswith('Т1-' + str(o1).strip()) == True:
+                                    if sp_tk[i][20] == '1':
+                                        msgg += sp_tk[i][0] + '\n' + ' Tп.з.=' + sp_tk[i][6] + ' Tшт.=' + sp_tk[i][
+                                            7] + '\n'
+                                    else:
+                                        msgg += sp_tk[i][0] + '\n'
+                            msgg += '\n'
+                        showDialog(self, msgg)
+
 
     def sost_tary_iz_mk(self,r,c):
         tabl_det = self.ui.table_sod_mk
@@ -464,7 +514,15 @@ class mywindow(QtWidgets.QMainWindow):
         s = self.dost_ostatok_det(s,nom_mk)
         s = self.tek_tara_rc(s,nom_mk)
         ed_kol = {0}
-        F.zapoln_wtabl(self, s, tabl_det, 0, ed_kol,'', '', isp_shapka=True, separ='')
+
+        F.zapoln_wtabl(self, s, tabl_det, 0, ed_kol,'', '', isp_shapka=True, separ='',ogr_maxshir_kol= 150)
+
+
+
+
+        #tabl_det.resizeColumnsToContents()
+
+
         tabl_det.setSelectionMode(1)
         for i in range(0,len(s)-1):
             for j in range(1, len(s[i])):
@@ -480,7 +538,6 @@ class mywindow(QtWidgets.QMainWindow):
                 if spis_mk[i][j] != '':
                     if '(полный компл.)' in spis_mk[i][j]:
                         F.ust_color_wtab(tabl_det, i - 1, 16 -koef+ (j- 12)/4 , 0, 254, 0)
-
                     else:
                         F.ust_color_wtab(tabl_det, i - 1, 16 -koef+ (j - 12) / 4, 254, 115, 0)
         tabl_det.setColumnHidden(11,True)
