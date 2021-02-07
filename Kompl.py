@@ -50,12 +50,7 @@ class mywindow(QtWidgets.QMainWindow):
         tabl_mk.setSelectionMode(1)
         F.ust_cvet_videl_tab(tabl_mk)
 
-        tabl_rc = self.ui.table_bd_rab_c
-        spis_bd_rc = F.otkr_f(F.tcfg('bd_rab_c'),separ='|')
-        F.zapoln_wtabl(self, spis_bd_rc, tabl_rc, 0, 0, '', '', isp_shapka=False, separ='')
-        tabl_rc.setSelectionBehavior(1)
-        tabl_rc.setSelectionMode(1)
-        F.ust_cvet_videl_tab(tabl_rc)
+
 
         tabl_tar = self.ui.table_bd_tara
         spis_tar = F.otkr_f(F.scfg('osn_tara') + os.sep + 'osn_Тара.txt',separ='|')
@@ -125,6 +120,8 @@ class mywindow(QtWidgets.QMainWindow):
         naim = tabl_det.item(r,3).text().strip()
         nn = tabl_det.item(r,4).text().strip()
         nom_mk = tabl_mk.item(tabl_mk.currentRow(), 0).text()
+        if tabl_det.item(r,c) == None:
+            return
         n_rc = tabl_det.item(r,c).text().strip()
         if F.nalich_file(F.scfg('bd_mk') + os.sep + nom_mk + '.txt') == False:
             showDialog(self, 'Не найти файл ' + F.scfg('bd_mk') + os.sep + nom_mk + '.txt')
@@ -148,10 +145,11 @@ class mywindow(QtWidgets.QMainWindow):
                                     showDialog(self, 'Не найден номер ТК')
                                     return
                                 break
-                        if F.nalich_file(F.scfg('add_docs') + os.sep + nom_tk + '_' + nn + '.txt') == False:
-                            showDialog(self, 'Не найден файл ТК')
+
+                        sp_tk = F.otkr_f(F.scfg('add_docs') + os.sep + nom_tk + '_' + nn + '.txt', False, "|",True,True)
+                        if sp_tk == ['']:
+                            showDialog(self, 'не корректная ТК')
                             return
-                        sp_tk = F.otkr_f(F.scfg('add_docs') + os.sep + nom_tk + '_' + nn + '.txt', False, "|")
                         msgg = ''
                         for o1 in sp_op:
                             msgg += str(o1) + ': '
@@ -379,14 +377,15 @@ class mywindow(QtWidgets.QMainWindow):
 
     def ct_tar(self):
         tabl_mk = self.ui.table_bd_mk
-        tabl_rc = self.ui.table_bd_rab_c
+
         tabl_tar = self.ui.table_bd_tara
         tabl_det = self.ui.table_sod_mk
         text_prim = self.ui.line_prim_cr_tar
-        rab_c = tabl_rc.item(tabl_rc.currentRow(), 0).text()
-        if tabl_rc.currentRow() == None or tabl_rc.currentRow() == -1:
+
+        if tabl_det.currentColumn() < 16 or tabl_det.currentRow() == -1:
             showDialog(self,'Не выбран рабочий центр')
             return
+        rab_c = tabl_det.item(tabl_det.currentRow(), tabl_det.currentColumn()).text()
         if tabl_tar.currentRow() == None or tabl_tar.currentRow() == -1:
             showDialog(self,'Не выбран вид тары')
             return
@@ -395,6 +394,14 @@ class mywindow(QtWidgets.QMainWindow):
             return
         s =[]
         spis = F.spisok_iz_wtabl(tabl_det,'',shapka=True)
+        mk = tabl_mk.item(tabl_mk.currentRow(),0).text().strip()
+        if F.nalich_file(F.scfg('mk_data') + os.sep + mk + '.txt') == False:
+            showDialog(self, 'Не обнаружен файл')
+            return
+        sp_mk = F.otkr_f(F.scfg('mk_data') + os.sep + mk + '.txt',False,'|')
+        if sp_mk == []:
+            showDialog(self, 'Некорректное содержимое МК')
+            return
         for i in range(1,len(spis)):
             if spis[i][0] != '':
                 if F.is_numeric(spis[i][0]) == False:
@@ -405,10 +412,15 @@ class mywindow(QtWidgets.QMainWindow):
                     showDialog(self, 'Кол-во деталей ' +  spis[i][3] + ' '  + spis[i][4] +
                                    '  превышает доступное ' + spis[i][1])
                     return
-                if spis[i][7] != '':
-                    if rab_c != spis[i][7]:
-                        showDialog(self, 'ДСЕ не находится на ' + rab_c)
-                        return
+                if self.tek_pol_det(spis[i][11].strip(),mk,tabl_det.currentColumn()-16) < 1:
+                    showDialog(self,  spis[i][3] + ' '  + spis[i][4] +' не находится на ' + rab_c)
+                    return
+
+                tmp = self.sost_rabot_po_det_rc_pornom(sp_mk,rab_c,spis[i][11],tabl_det.currentColumn()-15)
+                if tmp == False:
+                    showDialog(self, 'Полный объем работ на ' + rab_c + ' для ' + spis[i][3].strip() +
+                               ' ' + spis[i][4].strip() + ' не выполнен.')
+                    return
 
                 s.append([spis[i][0],spis[i][3].strip(),spis[i][4].strip(),spis[i][11].strip()])
         if len(s) == 0:
@@ -428,6 +440,45 @@ class mywindow(QtWidgets.QMainWindow):
         tabl_det.clear()
         self.obn_potok()
         showDialog(self,'Taра  №' + nom + '  ' + vid_tar + "  успено сформирована.")
+
+    def tek_pol_det(self,id,mk,rab_c):
+        tabl_det = self.ui.table_sod_mk
+        s = []
+        spis = F.spisok_iz_wtabl(tabl_det, '', shapka=True)
+        for i in range(len(spis)):
+            if spis[i][11] == id:
+                for j in range(16,tabl_det.columnCount()):
+                    s.append([spis[i][j],0])
+        s[0][1] = spis[i][5]
+        bd_arh = F.otkr_f(F.tcfg('arh_tar'), separ='|')
+        mar = []
+        for i in bd_arh:
+            if i[3] == mk:
+                tmp_tar = F.otkr_f(F.scfg('bd_tara') + os.sep + i[0] + '.txt',separ='|')
+                for j in range(len(tmp_tar)):
+                    if tmp_tar[j][3] == id:
+                        arr = i[9].split('-->')
+                        arr1 = arr[0].split('$')
+                        arr2 = arr[-1].split('$')
+                        mar.append([tmp_tar[j][0],i[7],arr1[-1],arr1[-2],arr2[-1],arr2[-2]])
+        for i in range(len(mar)):
+            s[int(mar[i][3])][1] = int(s[int(mar[i][3])][1]) - int(mar[i][0])
+            s[int(mar[i][5])][1] = int(s[int(mar[i][5])][1]) + int(mar[i][0])
+
+        return int(s[rab_c][1])
+
+    def sost_rabot_po_det_rc_pornom(self,sp,rc,id,kol):
+        for i in range(len(sp)):
+            if sp[i][6] == id:
+                por_nom = 0
+                for j in range(12,len(sp[i]),4):
+                    if sp[i][j-1] != '':
+                        por_nom+=1
+                    if sp[0][j-1] == rc and por_nom == kol:
+                        if 'Полный' in sp[i][j+1]:
+                            return True
+                        return False
+
 
     def obn_rc_potok(self):
         tabl_rc_potok = self.ui.table_bd_rab_c_potok
@@ -516,17 +567,10 @@ class mywindow(QtWidgets.QMainWindow):
         ed_kol = {0}
 
         F.zapoln_wtabl(self, s, tabl_det, 0, ed_kol,'', '', isp_shapka=True, separ='',ogr_maxshir_kol= 150)
-
-
-
-
-        #tabl_det.resizeColumnsToContents()
-
-
         tabl_det.setSelectionMode(1)
-        for i in range(0,len(s)-1):
+        for i in range(0,len(s)):
             for j in range(1, len(s[i])):
-                F.dob_color_wtab(tabl_det,i,j,16,16,16)
+                F.dob_color_wtab(tabl_det,i-1,j,16,16,16)
             if i > 0 and int(s[i][2]) == int(s[i][5]):
                 F.dob_color_wtab(tabl_det, i-1, 0, 16, 16, 16)
         spis_mk = F.otkr_f(F.scfg('bd_mk') + os.sep + nom_mk + '.txt', separ="|")
@@ -538,8 +582,11 @@ class mywindow(QtWidgets.QMainWindow):
                 if spis_mk[i][j] != '':
                     if '(полный компл.)' in spis_mk[i][j]:
                         F.ust_color_wtab(tabl_det, i - 1, 16 -koef+ (j- 12)/4 , 0, 254, 0)
+                        if 'Полный' in spis_mk[i][j+1]:
+                            F.ust_color_wtab(tabl_det, i - 1, 17 - koef + (j - 12) / 4, 254, 254, 254)
                     else:
                         F.ust_color_wtab(tabl_det, i - 1, 16 -koef+ (j - 12) / 4, 254, 115, 0)
+
         tabl_det.setColumnHidden(11,True)
 
 

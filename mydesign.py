@@ -107,11 +107,6 @@ class Ui_MainWindow(object):
         self.table_bd_tara.setColumnCount(0)
         self.table_bd_tara.setRowCount(0)
         self.horizontalLayout.addWidget(self.table_bd_tara)
-        self.table_bd_rab_c = QtWidgets.QTableWidget(self.tab_2)
-        self.table_bd_rab_c.setObjectName("table_bd_rab_c")
-        self.table_bd_rab_c.setColumnCount(0)
-        self.table_bd_rab_c.setRowCount(0)
-        self.horizontalLayout.addWidget(self.table_bd_rab_c)
         self.verticalLayout.addLayout(self.horizontalLayout)
         self.table_sod_mk = QtWidgets.QTableWidget(self.tab_2)
         self.table_sod_mk.setMinimumSize(QtCore.QSize(0, 444))
@@ -131,7 +126,7 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
-        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
