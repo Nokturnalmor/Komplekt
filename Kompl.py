@@ -17,6 +17,21 @@ def showDialog(self, msg):
     msgBox.setStandardButtons(QtWidgets.QMessageBox.Ok)  # | QtWidgets.QMessageBox.Cancel)
     returnValue = msgBox.exec()
 
+def showDialogYNC(self, msg):
+    msgBox = QtWidgets.QMessageBox()
+    msgBox.setIcon(QtWidgets.QMessageBox.Information)
+    msgBox.setText(msg)
+    msgBox.setWindowTitle("Внимание!")
+    msgBox.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Cancel)
+    returnValue = msgBox.exec()
+    if returnValue == 123:
+        return 'Yes'
+    if returnValue == 123:
+        return 'No'
+    if returnValue == 123:
+        return 'Cancel'
+    return 'False'
+
 #class mywindow2(QtWidgets.QDialog):  # диалоговое окно
 #    def __init__(self,parent=None,item_o="",p1=0,p2=0):
 #        self.item_o = item_o
@@ -146,32 +161,38 @@ class mywindow(QtWidgets.QMainWindow):
         s_vidano = s[4]
         s_v_tare_po_mar = s[5]
         s_v_tare_vne_mar = s[6]
+        s_pererabot_k_perem = s[7]
         msg = 'По маршруту: ' + "\n" + rc + ' '
         for i in range(len(s_mar)):
             if s_mar[i][0] == rc:
-                msg+= str(s_mar[i][1]) + 'шт.'+  "\n"
+                msg+= str(s_mar[i][1]) + ' шт.'+  "\n"
         msg+= "\n" + 'Вне маршурта:'+ "\n"
         for i in s_vne_mar.keys():
             if s_vne_mar[i] > 0:
-                msg+= i + ' ' + str(s_vne_mar[i]) + 'шт.' +  "\n"
+                msg+= i + ' ' + str(s_vne_mar[i]) + ' шт.' +  "\n"
         msg += "\n" + 'Без тары:' + "\n" + rc + ' '
         for i in range(len(s_bez_tar_po_mar)):
             if s_bez_tar_po_mar[i][0] == rc:
-                msg+= str(s_bez_tar_po_mar[i][1]) + 'шт.'+  "\n"
+                msg+= 'По маршруту: ' + str(s_bez_tar_po_mar[i][1]) + ' шт.'+  "\n"
         for i in s_bez_tar_vne_mar.keys():
             if s_bez_tar_vne_mar[i] > 0:
-                msg += i + ' ' + str(s_bez_tar_vne_mar[i]) + 'шт.' + "\n"
+                msg += 'Вне маршурта: ' + i + ' ' + str(s_bez_tar_vne_mar[i]) + ' шт.' + "\n"
         msg += "\n" + 'Выдано:' + "\n" + rc + ' '
         for i in range(len(s_vidano)):
             if s_vidano[i][0] == rc:
-                msg+= str(s_vidano[i][1]) + 'шт.'+  "\n"
+                msg+= str(s_vidano[i][1]) + ' шт.'+  "\n"
         msg += "\n" + 'В таре:' + "\n" + rc + ' '
         for i in range(len(s_v_tare_po_mar)):
             if s_v_tare_po_mar[i][0] == rc:
-                msg += str(s_v_tare_po_mar[i][1]) + 'шт.'+  "\n"
+                msg += 'По маршруту: ' + str(s_v_tare_po_mar[i][1]) + ' шт.'+  "\n"
         for i in s_v_tare_vne_mar.keys():
             if s_v_tare_vne_mar[i] > 0:
-                msg += i + ' ' + str(s_v_tare_vne_mar[i]) + 'шт.' + "\n"
+                msg += 'Вне маршурта: ' + i + ' ' + str(s_v_tare_vne_mar[i]) + ' шт.' + "\n"
+        msg += "\n" + 'Переработано для перемещения:' + "\n" + rc + ' '
+        for i in range(len(s_pererabot_k_perem)):
+            if s_pererabot_k_perem[i][0] == rc:
+                msg += str(s_pererabot_k_perem[i][1]) + ' шт.' + "\n"
+
         F.msgbox(msg)
         return
 
@@ -303,10 +324,11 @@ class mywindow(QtWidgets.QMainWindow):
         return
 
     def uchet_komplektacii(self,spis_arh_tar,nom_tar,nom_mk,rc,nomer_rc):
-        nomer = nomer_rc
+
         spis_mk = F.otkr_f(F.scfg('bd_mk') + os.sep + nom_mk + '.txt', separ="|")
         spis_tar = F.otkr_f(F.scfg('bd_tara') + os.sep + nom_tar + '.txt',separ='|')
         for i in range(len(spis_tar)):
+            nomer = nomer_rc
             for j in range(len(spis_mk)):
                 if spis_tar[i][3].strip() == spis_mk[j][6].strip():
                     kol_vyd = 0
@@ -326,9 +348,10 @@ class mywindow(QtWidgets.QMainWindow):
                     if kol_vyd == int(spis_mk[j][2]):
                         spis_mk[j][nomer_rc_v_mk] = str(kol_vyd) + ' шт. (полный компл.)'
                     elif kol_vyd < int(spis_mk[j][2]):
-                        if kol_vyd//int(spis_mk[j][7]) > 1:
+                        if kol_vyd//int(spis_mk[j][7]) >= 1:
                             spis_mk[j][nomer_rc_v_mk] = str(kol_vyd) + ' шт. (' + str(
                                 int(kol_vyd//int(spis_mk[j][7]))) + 'компл.)'
+                    break
         F.zap_f(F.scfg('bd_mk') + os.sep + nom_mk + '.txt',spis_mk,'|')
         return
 
@@ -372,8 +395,18 @@ class mywindow(QtWidgets.QMainWindow):
             F.msgbox('Не выбран РЦ')
             return
 
+
         nom_tar = tabl_potok.item(tabl_potok.currentRow(),0).text()
         sp_tar = F.otkr_f(F.tcfg('arh_tar'), separ='|')
+        for i in range(0, len(sp_tar)):
+            if sp_tar[i][0] == nom_tar:
+                tek_dvig = sp_tar[i][9].split("-->")[-1]
+                tek_pol = tek_dvig.split("$")[-1]
+                if tek_pol == rab_c:
+                    F.msgbox('Тара уже находится в ' + tek_pol)
+                    return
+                break
+
         for i in range(0, len(sp_tar)):
             if sp_tar[i][0] == nom_tar:
                 sp_tar[i][9] = sp_tar[i][9] + "-->" + dop
@@ -391,9 +424,6 @@ class mywindow(QtWidgets.QMainWindow):
         tabl_tar = self.ui.table_bd_tara
         tabl_det = self.ui.table_sod_mk
         text_prim = self.ui.line_prim_cr_tar
-
-
-
 
         if tabl_det.currentColumn() < 16 or tabl_det.currentRow() == -1:
             if tabl_rc.currentRow() != -1:
@@ -449,6 +479,7 @@ class mywindow(QtWidgets.QMainWindow):
                 s_tmp = self.tek_pol_det(id, mk, '', bd_arh)
                 s_bez_tar_po_mar = s_tmp[2]
                 s_bez_tar_vne_mar = s_tmp[3]
+                s_pererabot_k_perem = s_tmp[7]
                 for j in range(len(s_bez_tar_po_mar)):
                     if s_bez_tar_po_mar[j][0] == rab_c:
                         bez_tar_po_mar = int(s_bez_tar_po_mar[j][1])
@@ -456,6 +487,10 @@ class mywindow(QtWidgets.QMainWindow):
                 for j in s_bez_tar_vne_mar.keys():
                     if j == rab_c:
                         bez_tar_vne_mar = int(s_bez_tar_vne_mar[j])
+                        break
+                for j in range(len(s_pererabot_k_perem)):
+                    if s_pererabot_k_perem[j][0] == rab_c:
+                        pererabot_k_perem = int(s_pererabot_k_perem[j][1])
                         break
                 s_vidano = s_tmp[4]
                 for j in range(len(s_vidano)):
@@ -468,9 +503,27 @@ class mywindow(QtWidgets.QMainWindow):
                 else:
                     bez_tar = bez_tar_po_mar
 
+                ##if pererabot_k_perem > 0 and bez_tar > 0:
+                 #   rez = showDialogYNC(self, 'Доступно: до обработки ' + str(bez_tar) + ' шт., ' +
+                 #                             'после обработки ' + str(pererabot_k_perem) + ' шт.' + n/ +
+                 #                             'взять для перемещения ДО ОБРАБОТКИ?')
+                 #   if rez == 'Cancel':
+                 #       return
+                 #   elif rez == 'No':
+                 #       return
+                 #   elif rez == 'Yes':
+                 #       return
+
+
                 if int(spis[i][0]) > bez_tar:
-                    showDialog(self, 'Кол-во деталей ' +  spis[i][3] + ' '  + spis[i][4] +
-                                   '  превышает доступное ' + str(int(dost_kol) - bez_tar_po_mar))
+                    if pererabot_k_perem == 0:
+                        showDialog(self, 'Кол-во деталей ' +  spis[i][3] + ' '  + spis[i][4] +
+                                   '  превышает доступное в цеху, не выданное, без тары: ' + str(bez_tar))
+                        return
+
+                if pererabot_k_perem <  int(spis[i][0]):
+                    showDialog(self, 'Кол-во деталей ' + spis[i][3] + ' ' + spis[i][4] +
+                               '  превышает доступное в цеху, после обработки: ' + str(pererabot_k_perem))
                     return
 
 
@@ -510,7 +563,16 @@ class mywindow(QtWidgets.QMainWindow):
         showDialog(self,'Taра  №' + nom + '  ' + vid_tar + "  успено сформирована.")
 
     def tek_pol_det(self,id,mk,rab_c,bd_arh):
+        """
+        :param id:
+        :param mk:
+        :param rab_c:
+        :param bd_arh:
+        :return:
+        По маршруту, вне маршрута, s_bez_tar_po_mar, s_bez_tar_vne_mar, Выдано, s_v_tare_po_mar, s_v_tare_vne_mar, s_pererabot_k_perem
+        """
         tabl_det = self.ui.table_sod_mk
+        sp_nar = F.otkr_f(F.tcfg('Naryad'),separ='|')
         s = []
         s2 = dict()
         bd_rab_c = F.otkr_f(F.tcfg('bd_rab_c'),separ='|')
@@ -529,6 +591,7 @@ class mywindow(QtWidgets.QMainWindow):
 
         s4 = copy.deepcopy(s)
         s5 = copy.deepcopy(s)
+        s6 = copy.deepcopy(s)
 
         s[0][1] = spis[i][5]
         s3 = copy.deepcopy(s)
@@ -577,7 +640,6 @@ class mywindow(QtWidgets.QMainWindow):
                     #s4[int(mar[i][3]) - 1][1] = int(s4[int(mar[i][3]) - 1][1]) - int(mar[i][0])
 
 
-
             if mar[i][6] == 'выдано': #в работе
                 if mar[i][3] == '0':
                     s32[mar[i][2]] = int(s32[mar[i][2]]) - int(mar[i][0])
@@ -590,8 +652,6 @@ class mywindow(QtWidgets.QMainWindow):
                         s3[int(mar[i][3]) - 1][1] = int(s3[int(mar[i][3]) - 1][1]) - int(mar[i][0])
 
                 s4[int(mar[i][5]) - 1][1] = int(s4[int(mar[i][5]) - 1][1]) + int(mar[i][0])
-
-
 
 
                 #s5[int(mar[i][3]) - 1][1] = int(s5[int(mar[i][3]) - 1][1]) - int(mar[i][0])
@@ -607,8 +667,31 @@ class mywindow(QtWidgets.QMainWindow):
                     s5[int(mar[i][5]) - 1][1] = int(s5[int(mar[i][5]) - 1][1]) + int(mar[i][0])
 
                     #s3[int(mar[i][3]) - 1][1] = int(s3[int(mar[i][3]) - 1][1]) - int(mar[i][0])
+
+        spis_mk = F.otkr_f(F.scfg('bd_mk') + os.sep + mk + '.txt', separ="|")
+
+        for i in range(1, len(spis_mk)):
+            if spis_mk[i][6] == id:
+                koef = 0
+                for j in range(12, len(spis_mk[i]), 4):
+                    if spis_mk[i][j - 1] == '':
+                        koef += 1
+                    if spis_mk[i][j] != '':
+                        if 'Полный' in spis_mk[i][j + 1]:
+                            if s4[int((j-12-koef*4)/4)][1] > 0:
+                                s6[int((j-12-koef*4)/4)][1] = spis_mk[i][2]
+                        else:
+                            summ_kol = 0
+                            sp_nar_mar = spis_mk[i][j + 1].split('$')
+                            for k in sp_nar_mar:
+                                if "Завершен" in k:
+                                    n_nar = k.split(' Завершен')[0].strip()
+                                    kol = F.naiti_v_spis_1_1(sp_nar,0,n_nar,12)
+                                    summ_kol += int(kol)
+                            s6[int((j-12-koef*4)/4)][1] = summ_kol
+
         if rab_c == '':
-            return [s,s2,s3,s32,s4,s5,s52]
+            return [s,s2,s3,s32,s4,s5,s52,s6] # По маршруту, вне маршрута, s_bez_tar_po_mar, s_bez_tar_vne_mar, Выдано, s_v_tare_po_mar, s_v_tare_vne_mar,s_pererabot_k_perem
         else:
             return int(s[rab_c][1])
 
