@@ -9,13 +9,7 @@ from mydesign import Ui_MainWindow  # импорт нашего сгенерир
 #from mydesign2 import Ui_Dialog  # импорт нашего сгенерированного файла
 import sys
 
-def showDialog(self, msg):
-    msgBox = QtWidgets.QMessageBox()
-    msgBox.setIcon(QtWidgets.QMessageBox.Information)
-    msgBox.setText(msg)
-    msgBox.setWindowTitle("Внимание!")
-    msgBox.setStandardButtons(QtWidgets.QMessageBox.Ok)  # | QtWidgets.QMessageBox.Cancel)
-    returnValue = msgBox.exec()
+
 
 def showDialogYNC(self, msg):
     msgBox = QtWidgets.QMessageBox()
@@ -49,6 +43,7 @@ class mywindow(QtWidgets.QMainWindow):
         super(mywindow, self).__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.modal = 0
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.setWindowTitle("Диспетчирование")
         #self.resized.connect(self.widths)
@@ -65,7 +60,8 @@ class mywindow(QtWidgets.QMainWindow):
         tabl_mk.setSelectionMode(1)
         F.ust_cvet_videl_tab(tabl_mk)
 
-
+        push_obnov = self.ui.pushButton_obnov_mk
+        push_obnov.clicked.connect(self.zagruz_det_iz_mk)
 
         tabl_tar = self.ui.table_bd_tara
         spis_tar = F.otkr_f(F.scfg('osn_tara') + os.sep + 'osn_Тара.txt', separ='|')
@@ -126,8 +122,20 @@ class mywindow(QtWidgets.QMainWindow):
         if tabl_det.hasFocus() == False:
             return
         if e.key() == 16777220:
-            self.dblclk_tab_det()
+            if self.modal == 0:
+                self.dblclk_tab_det()
+            else:
+                self.modal = 0
 
+    def showDialog(self, msg):
+        msgBox = QtWidgets.QMessageBox()
+        self.modal = 1
+        msgBox.setIcon(QtWidgets.QMessageBox.Information)
+        msgBox.setText(msg)
+        msgBox.setWindowTitle("Внимание!")
+        msgBox.setStandardButtons(QtWidgets.QMessageBox.Ok)  # | QtWidgets.QMessageBox.Cancel)
+        returnValue = msgBox.exec()
+        
     def clk_rc(self):
         tabl_det = self.ui.table_sod_mk
         tabl_det.setCurrentCell(-1,-1)
@@ -135,7 +143,8 @@ class mywindow(QtWidgets.QMainWindow):
     def tab_click(self):
         tab = self.ui.tabWidget
         if tab.currentIndex() == 0:
-            self.zagruz_det_iz_mk()
+            #self.zagruz_det_iz_mk()
+            return
 
     def clk_tab_det(self):
         vne_marshruta = self.obn_rc_potok()
@@ -203,8 +212,7 @@ class mywindow(QtWidgets.QMainWindow):
         for i in range(len(s_pererabot_k_perem)):
             if s_pererabot_k_perem[i][0] == rc:
                 msg += str(s_pererabot_k_perem[i][1]) + ' шт.' + "\n"
-
-        F.msgbox(msg)
+        self.showDialog(msg)
         return
 
 
@@ -227,7 +235,7 @@ class mywindow(QtWidgets.QMainWindow):
                 for i in range(0, len(det_tmp)):
                     if det_tmp[i][1].strip() == naim and det_tmp[i][2].strip() == nn:
                         s+= sost + ' ' + nom + ' ' + nazv + '\n' + marsh + '\n' + '\n'
-        showDialog(self, s)
+        self.showDialog(s)
         return
 
 
@@ -238,7 +246,7 @@ class mywindow(QtWidgets.QMainWindow):
         tabl_potok = self.ui.table_potok
         tabl_rc_potok = self.ui.table_bd_rab_c_potok
         if tabl_potok.currentRow() == None or tabl_potok.currentRow() == -1:
-            showDialog(self, 'Не выбрана тара')
+            self.showDialog('Не выбрана тара')
             return
         nom_mk = tabl_potok.item(tabl_potok.currentRow(), 3).text()
         nom_tar = tabl_potok.item(tabl_potok.currentRow(), 0).text()
@@ -254,7 +262,7 @@ class mywindow(QtWidgets.QMainWindow):
                     break
             mar_tmp = '-->'.join(mar_tmp)
             s = s + i[1] + ' ' + i[2] + ' ' + i[0] + 'шт. Маршрут: ' + mar_tmp + '\n'
-        showDialog(self,'*скопирован в буфер.\n' + s)
+        self.showDialog('*скопирован в буфер.\n' + s)
         F.copy_bufer(s)
 
     def spis_det_s_ih_marsh(self,nom_mk):
@@ -301,13 +309,13 @@ class mywindow(QtWidgets.QMainWindow):
         tabl_rc_potok = self.ui.table_bd_rab_c_potok
         tabl_det = self.ui.table_sod_mk
         if tabl_potok.currentRow() == None or tabl_potok.currentRow() == -1:
-            showDialog(self, 'Не выбрана тара')
+            self.showDialog('Не выбрана тара')
             return
         if tabl_det.currentRow() == None or tabl_det.currentRow() == -1:
-            showDialog(self, 'Не выбран РЦ')
+            self.showDialog('Не выбран РЦ')
             return
         if tabl_det.currentColumn() < 16 or tabl_det.currentItem() == None:
-            showDialog(self, 'Не выбран РЦ')
+            self.showDialog('Не выбран РЦ')
             return
         nom_tar = tabl_potok.item(tabl_potok.currentRow(), 0).text()
         nom_mk = tabl_potok.item(tabl_potok.currentRow(), 3).text()
@@ -315,13 +323,13 @@ class mywindow(QtWidgets.QMainWindow):
         arr_rc = tabl_det.currentItem().text().split('_')
         rc = arr_rc[0]
         if self.vse_det_v_odin_rc(nom_mk,nom_tar,rc) == False:
-            showDialog(self, 'Нужно переформировать. Не все детали в таре ' + nom_tar + " имеют общий РЦ :" + rc)
+            self.showDialog('Нужно переформировать. Не все детали в таре ' + nom_tar + " имеют общий РЦ :" + rc)
             return
         sp_tar = F.otkr_f(F.tcfg('arh_tar'), separ='|')
         for i in range(0, len(sp_tar)):
             if sp_tar[i][0] == nom_tar:
                 if rc != self.tek_rc(sp_tar[i][9]):
-                    showDialog(self, 'Нельзя выдать в ' + rc + ", т.к. тара находится в " + self.tek_rc(sp_tar[i][9]))
+                    self.showDialog('Нельзя выдать в ' + rc + ", т.к. тара находится в " + self.tek_rc(sp_tar[i][9]))
                     return
                 sp_tar[i][6] = 'выдано'
                 sp_tar[i][7] = str(tabl_det.currentColumn()-15)
@@ -331,7 +339,7 @@ class mywindow(QtWidgets.QMainWindow):
         self.obn_potok()
         self.dost_ostatok_det()
         self.oform_cveta()
-        showDialog(self, 'Выдача записана успешно')
+        self.showDialog('Выдача записана успешно')
         return
 
     def uchet_komplektacii(self,spis_arh_tar,nom_tar,nom_mk,rc,nomer_rc):
@@ -371,7 +379,7 @@ class mywindow(QtWidgets.QMainWindow):
         tabl_potok = self.ui.table_potok
         tabl_rc_potok = self.ui.table_bd_rab_c_potok
         if tabl_potok.currentRow() == None or tabl_potok.currentRow() == -1:
-            showDialog(self, 'Не выбрана тара')
+            self.showDialog('Не выбрана тара')
             return
         nom_tar = tabl_potok.item(tabl_potok.currentRow(), 0).text()
         sp_tar = F.otkr_f(F.tcfg('arh_tar'), separ='|')
@@ -391,17 +399,19 @@ class mywindow(QtWidgets.QMainWindow):
         tabl_rc_potok = self.ui.table_bd_rab_c_potok
         tabl_det = self.ui.table_sod_mk
         if tabl_potok.currentRow() == None or tabl_potok.currentRow() == -1:
-            showDialog(self,'Не выбрана тара')
+            self.showDialog('Не выбрана тара')
             return
 
         dop = ''
         if tabl_rc_potok.currentRow() >= 0:
             rab_c = tabl_rc_potok.item(tabl_rc_potok.currentRow(), 0).text()
             dop = F.tek_polz()+"$"+F.now()+"$0$"+rab_c
+            flag = 0
         if tabl_det.currentRow() >= 0:
             arr_rab_c = tabl_det.currentItem().text().split('_')
             rab_c = arr_rab_c[0]
             dop = F.tek_polz() + "$" + F.now() + "$" + str(tabl_det.currentColumn() - 15) + "$" + rab_c
+            flag = 1
 
         if dop == '':
             F.msgbox('Не выбран РЦ')
@@ -418,6 +428,7 @@ class mywindow(QtWidgets.QMainWindow):
             if sp_tar[i][0] == nom_tar:
                 tek_dvig = sp_tar[i][9].split("-->")[-1]
                 tek_pol = tek_dvig.split("$")[-1]
+                tek_stat = tek_dvig.split("$")[-2]
 
         for det in range(len(tmp_tar)):
 
@@ -431,14 +442,20 @@ class mywindow(QtWidgets.QMainWindow):
                     pererabot_k_perem = int(s_pererabot_k_perem[j][1])
                     break
 
-            if tabl_det.currentColumn() > 16 and pererabot_k_perem < int(tmp_tar[det][0]):
-                showDialog(self, 'Кол-во деталей ' + tmp_tar[det][1] + ' ' +
+            if int(tek_stat) > 0 and tabl_det.currentColumn() > 16 and pererabot_k_perem < int(tmp_tar[det][0]):
+                self.showDialog('Кол-во деталей ' + tmp_tar[det][1] + ' ' +
                            tmp_tar[det][2] +
                            '  превышает доступное в цеху, после обработки: ' + str(pererabot_k_perem))
                 return
-
-
-
+            if flag == 1:
+                for i in range(1, tabl_det.rowCount()):
+                    if tabl_det.item(i, 11).text() == id:
+                        tmp_arr_rab_c = tabl_det.item(i, tabl_det.currentColumn()).text().split('_')
+                        tmp_rab_c = tmp_arr_rab_c[0]
+                        if tmp_rab_c != rab_c:
+                            F.msgbox(
+                                tabl_det.item(i, 3).text() + ' ' + tabl_det.item(i, 4).text() + ' не имеют общий рабочий центр')
+                            return
 
         for i in range(0, len(sp_tar)):
             if sp_tar[i][0] == nom_tar:
@@ -456,6 +473,9 @@ class mywindow(QtWidgets.QMainWindow):
                         F.msgbox('Движение не по маршруту')
                         return
                 break
+
+
+
 
         for i in range(0, len(sp_tar)):
             if sp_tar[i][0] == nom_tar:
@@ -481,7 +501,7 @@ class mywindow(QtWidgets.QMainWindow):
                 dost_kol = int(tabl_rc.item(tabl_rc.currentRow(),2).text())
                 flag = 1
             else:
-                showDialog(self,'Не выбран рабочий центр')
+                self.showDialog('Не выбран рабочий центр')
                 return
         else:
             arr_rab_c = tabl_det.item(tabl_det.currentRow(), tabl_det.currentColumn()).text().split('_')
@@ -489,25 +509,29 @@ class mywindow(QtWidgets.QMainWindow):
             flag = 0
 
         if tabl_tar.currentRow() == None or tabl_tar.currentRow() == -1:
-            showDialog(self,'Не выбран вид тары')
+            self.showDialog('Не выбран вид тары')
             return
         if tabl_mk.currentRow() == None or tabl_mk.currentRow() == -1:
-            showDialog(self,'Не выбрана маршрутная карта')
+            self.showDialog('Не выбрана маршрутная карта')
             return
         s =[]
         spis = F.spisok_iz_wtabl(tabl_det,'',shapka=True)
         mk = tabl_mk.item(tabl_mk.currentRow(),0).text().strip()
         if F.nalich_file(F.scfg('mk_data') + os.sep + mk + '.txt') == False:
-            showDialog(self, 'Не обнаружен файл')
+            self.showDialog('Не обнаружен файл')
             return
         sp_mk = F.otkr_f(F.scfg('mk_data') + os.sep + mk + '.txt',False,'|')
         if sp_mk == []:
-            showDialog(self, 'Некорректное содержимое МК')
+            self.showDialog('Некорректное содержимое МК')
             return
+
+
+
         for i in range(1,len(spis)):
+
             if spis[i][0] != '':
                 if F.is_numeric(spis[i][0]) == False:
-                    showDialog(self,'В кол-во деталей ' +  spis[i][3] + ' '  + spis[i][4] +
+                    self.showDialog('В кол-во деталей ' +  spis[i][3] + ' '  + spis[i][4] +
                                ' введены некорректные данные: ' + spis[i][0])
                     return
                 if flag == 0:
@@ -515,14 +539,14 @@ class mywindow(QtWidgets.QMainWindow):
                     dost_kol = dost_kol_arr[-1]
 
                     if int(spis[i][0]) > int(dost_kol):
-                        showDialog(self, 'Кол-во деталей ' +  spis[i][3] + ' '  + spis[i][4] +
+                        self.showDialog('Кол-во деталей ' +  spis[i][3] + ' '  + spis[i][4] +
                                            '  превышает доступное ' + spis[i][1])
                         return
 
                 bd_arh = F.otkr_f(F.tcfg('arh_tar'), separ='|')
                 if flag == 0:
                     if self.tek_pol_det(spis[i][11].strip(),mk,tabl_det.currentColumn()-16,bd_arh) < 1:
-                        showDialog(self,  spis[i][3] + ' '  + spis[i][4] +' не находится на ' + rab_c)
+                        self.showDialog( spis[i][3] + ' '  + spis[i][4] +' не находится на ' + rab_c)
                         return
 
                 id = spis[i][11]
@@ -558,30 +582,30 @@ class mywindow(QtWidgets.QMainWindow):
                 if flag == 0:
                     if int(spis[i][0]) > bez_tar:
                         if pererabot_k_perem == 0:
-                            showDialog(self, 'Кол-во деталей ' +  spis[i][3] + ' '  + spis[i][4] +
+                            self.showDialog('Кол-во деталей ' +  spis[i][3] + ' '  + spis[i][4] +
                                        '  превышает доступное в цеху, не выданное, без тары: ' + str(bez_tar))
                             return
 
                     if tabl_det.currentColumn() > 16 and pererabot_k_perem < int(spis[i][0]):
-                        showDialog(self, 'Кол-во деталей ' + spis[i][3] + ' ' + spis[i][4] +
+                        self.showDialog('Кол-во деталей ' + spis[i][3] + ' ' + spis[i][4] +
                                    '  превышает доступное в цеху, после обработки: ' + str(pererabot_k_perem))
                         return
 
                     if vidano == spis[i][5]:
                         tmp = self.sost_rabot_po_det_rc_pornom(sp_mk,rab_c,spis[i][11],tabl_det.currentColumn()-15)
                         if tmp == False:
-                            showDialog(self, 'Полный объем работ на ' + rab_c + ' для ' + spis[i][3].strip() +
+                            self.showDialog('Полный объем работ на ' + rab_c + ' для ' + spis[i][3].strip() +
                                        ' ' + spis[i][4].strip() + ' не выполнен.')
                             return
                 else:
                     if dost_kol < int(spis[i][0]):
-                        showDialog(self, 'Кол-во деталей ' + spis[i][3] + ' ' + spis[i][4] +
+                        self.showDialog('Кол-во деталей ' + spis[i][3] + ' ' + spis[i][4] +
                                    '  превышает доступное в РЦ вне маршурта: ' + str(dost_kol))
                         return
 
                 s.append([spis[i][0],spis[i][3].strip(),spis[i][4].strip(),spis[i][11].strip()])
         if len(s) == 0:
-            showDialog(self, 'Не выбраны детали')
+            self.showDialog('Не выбраны детали')
             return
 
         sp_tar = F.otkr_f(F.tcfg('arh_tar'),separ='|')
@@ -605,7 +629,7 @@ class mywindow(QtWidgets.QMainWindow):
         for i in range(tabl_det.rowCount()):
             tabl_det.item(i,0).setText('')
 
-        showDialog(self,'Taра  №' + nom + '  ' + vid_tar + "  успено сформирована.")
+        self.showDialog('Taра  №' + nom + '  ' + vid_tar + "  успено сформирована.")
 
     def tek_pol_det(self,id,mk,rab_c,bd_arh):
         """
