@@ -882,7 +882,7 @@ class mywindow(QtWidgets.QMainWindow):
 
         tabl_det.setColumnHidden(6,True)
         tabl_det.setColumnHidden(7,True)
-        tabl_det.setColumnHidden(1,True)
+        #tabl_det.setColumnHidden(1,True)
         tabl_det.setColumnHidden(2,True)
 
         tabl_det.setSelectionMode(1)
@@ -906,7 +906,6 @@ class mywindow(QtWidgets.QMainWindow):
                 if self.uroven(s[j][3]) > tek_ur:
                     flag_niz = False
                     break
-
             if flag_niz == True:
                 F.ust_color_wtab(tabl_det, i - 1, 16, 254, 254, 254)  # в белый
 
@@ -920,11 +919,32 @@ class mywindow(QtWidgets.QMainWindow):
                     koef+=1
                 if spis_mk[i][j] != '':
                     if '(полный компл.)' in spis_mk[i][j]:
-                        F.ust_color_wtab(tabl_det, i - 1, 16 -koef+ (j- 12)/4 , 0, 254, 0)
+                        F.ust_color_wtab(tabl_det, i - 1, 16 -koef+ (j- 12)/4 , 0, 254, 0)  # в зеленый
                         if 'Полный' in spis_mk[i][j+1]:
-                            F.ust_color_wtab(tabl_det, i - 1, 17 - koef + (j - 12) / 4, 254, 254, 254)
+                            if tabl_det.columnCount() >= int(17 - koef + (j - 12) / 4) and tabl_det.item(i - 1,17 - koef + (j - 12) / 4) != None:
+                                F.ust_color_wtab(tabl_det, i - 1, 17 - koef + (j - 12) / 4, 254, 254, 254)   # в белый
+                            else:
+                                tabl_det.item(i - 1,1).setText('Готова')
                     else:
-                        F.ust_color_wtab(tabl_det, i - 1, 16 - koef+ (j - 12) / 4, 254, 115, 0)
+                        F.ust_color_wtab(tabl_det, i - 1, 16 - koef+ (j - 12) / 4, 254, 115, 0)  # в рыжый
+        s = F.spisok_iz_wtabl(tabl_det, '', True)
+        for i in range(1, len(s)):
+            tek_ur = self.uroven(s[i][3])
+            flag_niz = True
+            flag_gotovo = True
+            for j in range(i+1,len(s)):
+                if self.uroven(s[j][3]) <= tek_ur:
+                    flag_niz = False
+                    break
+                if self.uroven(s[j][3]) - 1 == tek_ur:
+                    if s[j][1] != "Готова":
+                        flag_gotovo = False
+                        break
+            if flag_gotovo == True:
+                F.ust_color_wtab(tabl_det, i - 1, 16, 254, 254, 254)  # в белый
+            if flag_niz == False:
+                break
+
 
         tabl_det.setColumnHidden(11,True)
 
