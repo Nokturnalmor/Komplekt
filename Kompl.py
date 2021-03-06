@@ -265,8 +265,8 @@ class mywindow(QtWidgets.QMainWindow):
         self.showDialog('*скопирован в буфер.\n' + s)
         F.copy_bufer(s)
 
-    def spis_det_s_ih_marsh(self,nom_mk):
-        spis = F.otkr_f(F.scfg('bd_mk') + os.sep + nom_mk + '.txt', separ="|")
+    def spis_det_s_ih_marsh(self,spis):
+
         s = []
         max_dop_dlina = 0
         for i in range(0, len(spis)):
@@ -303,11 +303,19 @@ class mywindow(QtWidgets.QMainWindow):
                 return False
         return True
 
-    def vydat(self):
-
+    def vydat(self, nom_tari_vidat = ''):
         tabl_potok = self.ui.table_potok
         tabl_rc_potok = self.ui.table_bd_rab_c_potok
         tabl_det = self.ui.table_sod_mk
+        if nom_tari_vidat != "" and nom_tari_vidat != False:
+            flag_naid = False
+            for i in range(tabl_potok.rowCount()):
+                if tabl_potok.item(i,0).text() == nom_tari_vidat:
+                    tabl_potok.selectRow(i)
+                    flag_naid = True
+            if flag_naid == False:
+                F.msgbox("Не найдена тара " + nom_tari_vidat)
+                return
         if tabl_potok.currentRow() == None or tabl_potok.currentRow() == -1:
             self.showDialog('Не выбрана тара')
             return
@@ -320,11 +328,18 @@ class mywindow(QtWidgets.QMainWindow):
         nom_tar = tabl_potok.item(tabl_potok.currentRow(), 0).text()
         nom_mk = tabl_potok.item(tabl_potok.currentRow(), 3).text()
 
+        tek_dvig =tabl_potok.item(tabl_potok.currentRow(), 9).text().split("-->")[-1]
+        tek_pol = tek_dvig.split("$")[-1]
+        tek_stat = tek_dvig.split("$")[-2]
+
         arr_rc = tabl_det.currentItem().text().split('_')
         rc = arr_rc[0]
-        if self.vse_det_v_odin_rc(nom_mk,nom_tar,rc) == False:
-            self.showDialog('Нужно переформировать. Не все детали в таре ' + nom_tar + " имеют общий РЦ :" + rc)
-            return
+
+
+        if tek_stat != '-1':
+            if self.vse_det_v_odin_rc(nom_mk,nom_tar,rc) == False:
+                self.showDialog('Нужно переформировать. Не все детали в таре ' + nom_tar + " имеют общий РЦ :" + rc)
+                return
         sp_tar = F.otkr_f(F.tcfg('arh_tar'), separ='|')
         for i in range(0, len(sp_tar)):
             if sp_tar[i][0] == nom_tar:
@@ -336,6 +351,25 @@ class mywindow(QtWidgets.QMainWindow):
                 break
         self.uchet_komplektacii(sp_tar,nom_tar,nom_mk,rc,tabl_det.currentColumn()-15)
         F.zap_f(F.tcfg('arh_tar'), sp_tar, '|')
+
+        if tek_stat == '-1':
+            tara = tabl_potok.item(tabl_potok.currentRow(), 5).text()
+            tabl_det.item(tabl_det.currentRow(),0).setText(tabl_det.item(tabl_det.currentRow(),5).text())
+            nom = self.ct_tar(tara)
+            self.vydat(nom)
+            return
+            #s = []
+            #spis = F.spisok_iz_wtabl(tabl_det, '', shapka=True)
+            #i = tabl_det.currentRow()
+            #s.append([spis[i][0], spis[i][3].strip(), spis[i][4].strip(), spis[i][11].strip()])
+            #
+            #sp_tar.append(
+            #    [nom, F.tek_polz(), F.date(2), nom_mk, '', vid_tar, status_tari, "", text_prim.text(),
+            #     F.tek_polz() + "$"
+            #     + F.now() + "$0$" + rab_c])
+            #F.zap_f(F.tcfg('arh_tar'), sp_tar, '|')
+            #F.zap_f(F.scfg('bd_tara') + os.sep + nom + '.txt', s, '|')
+
         self.obn_potok()
         self.dost_ostatok_det()
         self.oform_cveta()
@@ -402,7 +436,10 @@ class mywindow(QtWidgets.QMainWindow):
             self.showDialog('Не выбрана тара')
             return
 
+
         dop = ''
+        tmp_tar = F.otkr_f(F.scfg('bd_tara') + os.sep + tabl_potok.item(tabl_potok.currentRow(), 0).text() + '.txt',
+                           separ='|')
         if tabl_rc_potok.currentRow() >= 0:
             rab_c = tabl_rc_potok.item(tabl_rc_potok.currentRow(), 0).text()
             dop = F.tek_polz()+"$"+F.now()+"$0$"+rab_c
@@ -412,6 +449,20 @@ class mywindow(QtWidgets.QMainWindow):
             rab_c = arr_rab_c[0]
             dop = F.tek_polz() + "$" + F.now() + "$" + str(tabl_det.currentColumn() - 15) + "$" + rab_c
             flag = 1
+            if tabl_potok.item(tabl_potok.currentRow(), 6).text() == 'уровень':
+                id_parent = tabl_det.item(tabl_det.currentRow(),11).text()
+                id = tmp_tar[0][3]
+                for i in range(tabl_det.rowCount()):
+                    if flag == 2:
+                        dop = F.tek_polz() + "$" + F.now() + "$-1$" + rab_c
+                        break
+                    if tabl_det.item(i,11).text() == id:
+                        uroven_vh = self.uroven(tabl_det.item(i,4).text())
+                        for j in range(i,0,-1):
+                            if self.uroven(tabl_det.item(j,4).text()) < uroven_vh:
+                                if id_parent == tabl_det.item(j,11).text():
+                                    flag = 2
+                                    break
 
         if dop == '':
             F.msgbox('Не выбран РЦ')
@@ -421,7 +472,7 @@ class mywindow(QtWidgets.QMainWindow):
 
         mk = tabl_mk.item(tabl_mk.currentRow(), 0).text().strip()
 
-        tmp_tar = F.otkr_f(F.scfg('bd_tara') + os.sep + tabl_potok.item(tabl_potok.currentRow(), 0).text() + '.txt', separ='|')
+
         nom_tar = tabl_potok.item(tabl_potok.currentRow(), 0).text()
 
         for i in range(0, len(sp_tar)):
@@ -462,16 +513,21 @@ class mywindow(QtWidgets.QMainWindow):
                 tek_dvig = sp_tar[i][9].split("-->")[-1]
                 tek_pol = tek_dvig.split("$")[-1]
                 tek_por_nom = tek_dvig.split("$")[-2]
+                if tek_por_nom == '-1':
+                    F.msgbox('Выдача должна быть на первую операцию подсборки')
+                    return
+
                 if tek_pol == rab_c:
                     F.msgbox('Тара уже находится в ' + tek_pol)
                     return
                 if tabl_det.currentRow() >= 0:
-                    if int(tek_por_nom) > tabl_det.currentColumn() - 15:
-                        F.msgbox('Движение не по маршруту')
-                        return
-                    if int(tek_por_nom) > 0 and tabl_det.currentColumn() - 15 - int(tek_por_nom) > 1:
-                        F.msgbox('Движение не по маршруту')
-                        return
+                    if flag == 1:
+                        if int(tek_por_nom) > tabl_det.currentColumn() - 15:
+                            F.msgbox('Движение не по маршруту')
+                            return
+                        if int(tek_por_nom) > 0 and tabl_det.currentColumn() - 15 - int(tek_por_nom) > 1:
+                            F.msgbox('Движение не по маршруту')
+                            return
                 break
 
 
@@ -488,7 +544,7 @@ class mywindow(QtWidgets.QMainWindow):
         return
 
 
-    def ct_tar(self):
+    def ct_tar(self,vid_tar = ''):
         tabl_mk = self.ui.table_bd_mk
         tabl_rc = self.ui.table_bd_rab_c_potok
         tabl_tar = self.ui.table_bd_tara
@@ -509,8 +565,9 @@ class mywindow(QtWidgets.QMainWindow):
             flag = 0
 
         if tabl_tar.currentRow() == None or tabl_tar.currentRow() == -1:
-            self.showDialog('Не выбран вид тары')
-            return
+            if vid_tar == '' or vid_tar == False:
+                self.showDialog('Не выбран вид тары')
+                return
         if tabl_mk.currentRow() == None or tabl_mk.currentRow() == -1:
             self.showDialog('Не выбрана маршрутная карта')
             return
@@ -525,11 +582,33 @@ class mywindow(QtWidgets.QMainWindow):
             self.showDialog('Некорректное содержимое МК')
             return
 
-
+        flag_gotovost_podsborki = None
 
         for i in range(1,len(spis)):
 
             if spis[i][0] != '':
+                if flag_gotovost_podsborki == None:
+                    if spis[i][1] == 'Готова':
+                        flag_gotovost_podsborki = True
+                        obr_uroven = self.uroven(spis[i][3])
+                        verh = 0
+                        for j in range(i,0,-1):
+                            if self.uroven(spis[j][3]) < obr_uroven:
+                                verh = j+1
+                                break
+                        niz = len(spis)
+                        for j in range(i,len(spis)):
+                            if self.uroven(spis[j][3]) < obr_uroven:
+                                niz = j-1
+                                break
+                        for j in range(verh,niz+1):
+                            if self.uroven(spis[j][3]) == obr_uroven:
+                                    if spis[j][1] != 'Готова' or spis[j][0] == '':
+                                        flag_gotovost_podsborki = False
+                                        F.msgbox('Не все ДСЕ готовы к пермещению на следующий уровень '
+                                                 + spis[j][3] + " " + spis[j][4])
+                                        return
+
                 if F.is_numeric(spis[i][0]) == False:
                     self.showDialog('В кол-во деталей ' +  spis[i][3] + ' '  + spis[i][4] +
                                ' введены некорректные данные: ' + spis[i][0])
@@ -611,25 +690,34 @@ class mywindow(QtWidgets.QMainWindow):
         sp_tar = F.otkr_f(F.tcfg('arh_tar'),separ='|')
         nom = int(sp_tar[len(sp_tar) - 1][0]) + 1
         nom = '0' * (8 - len(str(nom))) + str(nom)
-        vid_tar = tabl_tar.item(tabl_tar.currentRow(),0).text()
+
+        if vid_tar == '' or vid_tar == False:
+            vid_tar = tabl_tar.item(tabl_tar.currentRow(),0).text()
 
         nom_mk = tabl_mk.item(tabl_mk.currentRow(),0).text()
 
+        status_tari = 'открыта'
+        if flag_gotovost_podsborki == True:
+            status_tari = 'уровень'
+
         if flag == 0:
-            sp_tar.append([nom,F.tek_polz(),F.date(2),nom_mk,'',vid_tar,'открыта',"",text_prim.text(),F.tek_polz()+"$"
+            sp_tar.append([nom,F.tek_polz(),F.date(2),nom_mk,'',vid_tar,status_tari,"",text_prim.text(),F.tek_polz()+"$"
                            +F.now()+"$"+ str(tabl_det.currentColumn()-15) + "$" + rab_c])
         else:
             sp_tar.append(
-                [nom, F.tek_polz(), F.date(2), nom_mk, '', vid_tar, 'открыта', "", text_prim.text(), F.tek_polz() + "$"
+                [nom, F.tek_polz(), F.date(2), nom_mk, '', vid_tar, status_tari, "", text_prim.text(), F.tek_polz() + "$"
                  + F.now() + "$0$" + rab_c])
         F.zap_f(F.tcfg('arh_tar'),sp_tar,'|')
         F.zap_f(F.scfg('bd_tara')+ os.sep + nom + '.txt',s,'|')
-        self.dost_ostatok_det()
+
+        self.dost_ostatok_det(sp_mk)
+
         self.obn_potok()
         for i in range(tabl_det.rowCount()):
             tabl_det.item(i,0).setText('')
 
         self.showDialog('Taра  №' + nom + '  ' + vid_tar + "  успено сформирована.")
+        return nom
 
     def tek_pol_det(self,id,mk,rab_c,bd_arh):
         """
@@ -725,7 +813,7 @@ class mywindow(QtWidgets.QMainWindow):
 
 
                 #s5[int(mar[i][3]) - 1][1] = int(s5[int(mar[i][3]) - 1][1]) - int(mar[i][0])
-            if mar[i][6] == 'открыта': #забрана
+            if mar[i][6] == 'открыта' or mar[i][6] == 'уровень': #забрана
                 if mar[i][3] == '0':
                     s52[mar[i][2]] = int(s52[mar[i][2]]) - int(mar[i][0])
                 else:
@@ -811,14 +899,19 @@ class mywindow(QtWidgets.QMainWindow):
         s= []
         s.append(bd_arh[0])
         for i in bd_arh:
-            if i[6] == 'открыта' and i[3] == mom_mk:
+            if i[6] == 'открыта' and i[3] == mom_mk or i[6] == 'уровень' and i[3] == mom_mk :
                 s.append(i)
         F.zapoln_wtabl(self,s,tabl_potok,0,0,"","",200,True,'',30)
 
-    def dost_ostatok_det(self):
+    def dost_ostatok_det(self,spis_det = False):
         tabl_mk = self.ui.table_bd_mk
         tabl_det = self.ui.table_sod_mk
+
+        if spis_det == False:
+            nom = tabl_mk.item(tabl_mk.currentRow(), 0).text()
+            spis_det = F.otkr_f(F.scfg('bd_mk') + os.sep + nom + '.txt', separ="|")
         spisok = F.spisok_iz_wtabl(tabl_det, '', shapka=True)
+
         bd_arh_tar = F.otkr_f(F.tcfg('arh_tar'), separ='|')
         for i in range(1,len(spisok)):
             s = self.tek_pol_det(spisok[i][11],tabl_mk.item(tabl_mk.currentRow(), 0).text(),'',bd_arh_tar)
@@ -828,9 +921,30 @@ class mywindow(QtWidgets.QMainWindow):
                     tmp = arr[0]
                 else:
                     tmp = tabl_det.item(i-1,j).text()
-                tabl_det.item(i-1,j).setText(tmp + '_' + str(s[0][j-16][1]))
+
+                if self.brak(spis_det,spisok[i][11],j) == True:
+                    tabl_det.item(i - 1, j).setText(tmp + '_0')
+                else:
+                    tabl_det.item(i-1,j).setText(tmp + '_' + str(s[0][j-16][1]))
                 tabl_det.resizeColumnToContents(j)
 
+    def brak(self,spis_det,ID,rc):
+        for i in range(len(spis_det)):
+            if spis_det[i][6] == ID:
+                kolonka = 0
+                for j in range(11, len(spis_det[i]),4):
+                    if spis_det[i][j] != "":
+                        kolonka+=1
+                        if kolonka == rc-15:
+                            break
+                if spis_det[i][j+3] == "":
+                    return False
+                arr_tmp = spis_det[i][j+3].split("$")
+                for j in range(len(arr_tmp)):
+                    arr_tmp2 = arr_tmp[j].split(' ')
+                    if arr_tmp2[-1] == "" or arr_tmp2[-1] == "Неисп-мый":
+                        return True
+                return False
 
     def tek_tara_rc(self,spisok,nom_mk):
         bd_arh_tar = F.otkr_f(F.tcfg('arh_tar'),separ='|')
@@ -848,6 +962,8 @@ class mywindow(QtWidgets.QMainWindow):
                             if sost == 'выдано':
                                 spisok[j][6] = 'выдано'
                             if sost == 'открыта':
+                                spisok[j][6] = nom
+                            if sost =='уровень':
                                 spisok[j][6] = nom
                             if sost == 'закрыта':
                                 spisok[j][6] = ''
@@ -867,7 +983,8 @@ class mywindow(QtWidgets.QMainWindow):
         if tabl_mk.currentRow() == -1:
             return
         nom = tabl_mk.item(tabl_mk.currentRow(), 0).text()
-        s = self.spis_det_s_ih_marsh(nom)
+        spis_det = F.otkr_f(F.scfg('bd_mk') + os.sep + nom + '.txt', separ="|")
+        s = self.spis_det_s_ih_marsh(spis_det)
 
         s[0][0] = 'Факт.кол.'
         s[0][1] = 'Дост.кол.'
@@ -878,7 +995,9 @@ class mywindow(QtWidgets.QMainWindow):
         ed_kol = {0}
         F.zapoln_wtabl(self, s, tabl_det, 0, ed_kol,'', '', isp_shapka=True, separ='',ogr_maxshir_kol= 150)
 
-        self.dost_ostatok_det()
+        self.dost_ostatok_det(spis_det)
+
+
 
         tabl_det.setColumnHidden(6,True)
         tabl_det.setColumnHidden(7,True)
@@ -888,6 +1007,7 @@ class mywindow(QtWidgets.QMainWindow):
         tabl_det.setSelectionMode(1)
         self.oform_cveta()
         self.obn_potok()
+
 
     def oform_cveta(self):
         tabl_det = self.ui.table_sod_mk
@@ -941,7 +1061,12 @@ class mywindow(QtWidgets.QMainWindow):
                         flag_gotovo = False
                         break
             if flag_gotovo == True:
-                F.ust_color_wtab(tabl_det, i - 1, 16, 254, 254, 254)  # в белый
+                if tabl_det.item(i - 1, 16).background().color().red() == 0 and \
+                    tabl_det.item(i - 1, 16).background().color().green() == 254 and \
+                        tabl_det.item(i - 1, 16).background().color().blue() == 0:
+                    pass
+                else:
+                    F.ust_color_wtab(tabl_det, i - 1, 16, 254, 254, 254)  # в белый
             if flag_niz == False:
                 break
 
