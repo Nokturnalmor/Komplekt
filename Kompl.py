@@ -251,7 +251,8 @@ class mywindow(QtWidgets.QMainWindow):
         nom_mk = tabl_potok.item(tabl_potok.currentRow(), 3).text()
         nom_tar = tabl_potok.item(tabl_potok.currentRow(), 0).text()
         spis = F.otkr_f(F.scfg('bd_tara') + os.sep + nom_tar + '.txt', separ="|")
-        sp_det_mar = self.spis_det_s_ih_marsh(nom_mk)
+        sp_det_mk =  F.otkr_f(F.scfg('bd_mk') + os.sep + nom_mk + '.txt', separ="|")
+        sp_det_mar = self.spis_det_s_ih_marsh(sp_det_mk)
         s = 'Список деталей в ' + tabl_potok.item(tabl_potok.currentRow(), 5).text()  + ' №' + nom_tar + ":" + '\n'
         for i in spis:
             mar_tmp = []
@@ -287,7 +288,8 @@ class mywindow(QtWidgets.QMainWindow):
         return s
 
     def vse_det_v_odin_rc(self,nom_mk,nom_tar,rc):
-        s = self.spis_det_s_ih_marsh(nom_mk)
+        sp_det_mk = F.otkr_f(F.scfg('bd_mk') + os.sep + nom_mk + '.txt', separ="|")
+        s = self.spis_det_s_ih_marsh(sp_det_mk)
         spis_tar = F.otkr_f(F.scfg('bd_tara') + os.sep + nom_tar + '.txt', separ='|')
 
         for i in range(len(spis_tar)):
@@ -385,6 +387,7 @@ class mywindow(QtWidgets.QMainWindow):
             for j in range(len(spis_mk)):
                 if spis_tar[i][3].strip() == spis_mk[j][6].strip():
                     kol_vyd = 0
+
                     for k in range(len(spis_arh_tar)):
                         if spis_arh_tar[k][3] == nom_mk and spis_arh_tar[k][6] == 'выдано' and str(nomer_rc) == spis_arh_tar[k][7]:
                             if self.tek_rc(spis_arh_tar[k][9]) == rc:
@@ -405,7 +408,15 @@ class mywindow(QtWidgets.QMainWindow):
                             spis_mk[j][nomer_rc_v_mk] = str(kol_vyd) + ' шт. (' + str(
                                 int(kol_vyd//int(spis_mk[j][7]))) + 'компл.)'
                     break
+
         F.zap_f(F.scfg('bd_mk') + os.sep + nom_mk + '.txt',spis_mk,'|')
+        spis_bd_mk = F.otkr_f(F.tcfg('bd_mk'), False, '|', False, False)
+        for i in range(len(spis_bd_mk)):
+            if spis_bd_mk[i][F.nom_kol_po_im_v_shap(spis_bd_mk, 'Номер')] == nom_mk:
+                if spis_bd_mk[i][F.nom_kol_po_im_v_shap(spis_bd_mk, 'Прогресс')] == "":
+                    spis_bd_mk[i][F.nom_kol_po_im_v_shap(spis_bd_mk, 'Прогресс')] = 'Выполняется'
+                    F.zap_f(F.tcfg('bd_mk'), spis_bd_mk, '|')
+                    break
         return
 
 
