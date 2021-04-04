@@ -305,11 +305,11 @@ class mywindow(QtWidgets.QMainWindow):
                 return False
         return True
 
-    def vydat(self, nom_tari_vidat = ''):
+    def vydat(self, nom_tari_vidat = ' '):
         tabl_potok = self.ui.table_potok
         tabl_rc_potok = self.ui.table_bd_rab_c_potok
         tabl_det = self.ui.table_sod_mk
-        if nom_tari_vidat != "" and nom_tari_vidat != False:
+        if nom_tari_vidat != " " and nom_tari_vidat != False:
             flag_naid = False
             for i in range(tabl_potok.rowCount()):
                 if tabl_potok.item(i,0).text() == nom_tari_vidat:
@@ -354,12 +354,12 @@ class mywindow(QtWidgets.QMainWindow):
         self.uchet_komplektacii(sp_tar,nom_tar,nom_mk,rc,tabl_det.currentColumn()-15)
         F.zap_f(F.tcfg('arh_tar'), sp_tar, '|')
 
-        if tek_stat == '-1':
-            tara = tabl_potok.item(tabl_potok.currentRow(), 5).text()
-            tabl_det.item(tabl_det.currentRow(),0).setText(tabl_det.item(tabl_det.currentRow(),5).text())
-            nom = self.ct_tar(tara)
-            self.vydat(nom)
-            return
+        #if tek_stat == '-1':
+            #tara = tabl_potok.item(tabl_potok.currentRow(), 5).text()
+            #tabl_det.item(tabl_det.currentRow(),0).setText(tabl_det.item(tabl_det.currentRow(),5).text())
+            #nom = self.ct_tar(tara)
+            #self.vydat(nom)
+            #return
             #s = []
             #spis = F.spisok_iz_wtabl(tabl_det, '', shapka=True)
             #i = tabl_det.currentRow()
@@ -446,8 +446,6 @@ class mywindow(QtWidgets.QMainWindow):
         if tabl_potok.currentRow() == None or tabl_potok.currentRow() == -1:
             self.showDialog('Не выбрана тара')
             return
-
-
         dop = ''
         tmp_tar = F.otkr_f(F.scfg('bd_tara') + os.sep + tabl_potok.item(tabl_potok.currentRow(), 0).text() + '.txt',
                            separ='|')
@@ -461,19 +459,33 @@ class mywindow(QtWidgets.QMainWindow):
             dop = F.tek_polz() + "$" + F.now() + "$" + str(tabl_det.currentColumn() - 15) + "$" + rab_c
             flag = 1
             if tabl_potok.item(tabl_potok.currentRow(), 6).text() == 'уровень':
-                id_parent = tabl_det.item(tabl_det.currentRow(),11).text()
                 id = tmp_tar[0][3]
                 for i in range(tabl_det.rowCount()):
-                    if flag == 2:
-                        dop = F.tek_polz() + "$" + F.now() + "$-1$" + rab_c
+                    if tabl_det.item(i, 11).text() == id:
+                        if i != tabl_det.currentRow()+1:
+                            F.msgbox('Нельзя переместить вне структуры')
+                            return
                         break
-                    if tabl_det.item(i,11).text() == id:
-                        uroven_vh = self.uroven(tabl_det.item(i,4).text())
-                        for j in range(i,0,-1):
-                            if self.uroven(tabl_det.item(j,4).text()) < uroven_vh:
-                                if id_parent == tabl_det.item(j,11).text():
-                                    flag = 2
-                                    break
+                dop = F.tek_polz() + "$" + F.now() + "$-1$" + rab_c
+                sp_tar = F.otkr_f(F.tcfg('arh_tar'), separ='|')
+                nom_tar = tabl_potok.item(tabl_potok.currentRow(), 0).text()
+                for i in range(0, len(sp_tar)):
+                    if sp_tar[i][0] == nom_tar:
+                        sp_tar[i][9] = sp_tar[i][9] + "-->" + dop
+                        sp_tar[i][6] = 'выдано'
+                        sp_tar[i][7] = -1
+                        break
+                F.zap_f(F.tcfg('arh_tar'), sp_tar, '|')
+                tara = tabl_potok.item(tabl_potok.currentRow(), 5).text()
+
+                self.ct_tar(tara,dop)
+
+
+
+                self.obn_potok()
+                self.oform_cveta()
+                self.dost_ostatok_det()
+                return
 
         if dop == '':
             F.msgbox('Не выбран РЦ')
@@ -550,12 +562,12 @@ class mywindow(QtWidgets.QMainWindow):
                 break
         F.zap_f(F.tcfg('arh_tar'),sp_tar,'|')
         self.obn_potok()
-        self.dost_ostatok_det()
         self.oform_cveta()
+        self.dost_ostatok_det()
         return
 
 
-    def ct_tar(self,vid_tar = ''):
+    def ct_tar(self,vid_tar = '',dop_perem = ''):
         tabl_mk = self.ui.table_bd_mk
         tabl_rc = self.ui.table_bd_rab_c_potok
         tabl_tar = self.ui.table_bd_tara
@@ -574,11 +586,16 @@ class mywindow(QtWidgets.QMainWindow):
             arr_rab_c = tabl_det.item(tabl_det.currentRow(), tabl_det.currentColumn()).text().split('_')
             rab_c = arr_rab_c[0]
             flag = 0
+        if vid_tar != '' and vid_tar != False:
+            flag_ur = True #подмена под урвоень
+        else:
+            flag_ur = False
 
         if tabl_tar.currentRow() == None or tabl_tar.currentRow() == -1:
             if vid_tar == '' or vid_tar == False:
                 self.showDialog('Не выбран вид тары')
                 return
+
         if tabl_mk.currentRow() == None or tabl_mk.currentRow() == -1:
             self.showDialog('Не выбрана маршрутная карта')
             return
@@ -627,17 +644,18 @@ class mywindow(QtWidgets.QMainWindow):
                 if flag == 0:
                     dost_kol_arr = tabl_det.currentItem().text().split('_')
                     dost_kol = dost_kol_arr[-1]
-
-                    if int(spis[i][0]) > int(dost_kol):
-                        self.showDialog('Кол-во деталей ' +  spis[i][3] + ' '  + spis[i][4] +
-                                           '  превышает доступное ' + spis[i][1])
-                        return
+                    if flag_ur == False:
+                        if int(spis[i][0]) > int(dost_kol):
+                            self.showDialog('Кол-во деталей ' +  spis[i][3] + ' '  + spis[i][4] +
+                                               '  превышает доступное ' + spis[i][1])
+                            return
 
                 bd_arh = F.otkr_f(F.tcfg('arh_tar'), separ='|')
                 if flag == 0:
-                    if self.tek_pol_det(spis[i][11].strip(),mk,tabl_det.currentColumn()-16,bd_arh) < 1:
-                        self.showDialog( spis[i][3] + ' '  + spis[i][4] +' не находится на ' + rab_c)
-                        return
+                    if flag_ur == False:
+                        if self.tek_pol_det(spis[i][11].strip(),mk,tabl_det.currentColumn()-16,bd_arh) < 1:
+                            self.showDialog( spis[i][3] + ' '  + spis[i][4] +' не находится на ' + rab_c)
+                            return
 
                 id = spis[i][11]
                 s_tmp = self.tek_pol_det(id, mk, '', bd_arh)
@@ -668,30 +686,30 @@ class mywindow(QtWidgets.QMainWindow):
                 else:
                     bez_tar = bez_tar_po_mar
 
+                if flag_ur == False:
+                    if flag == 0:
+                        if int(spis[i][0]) > bez_tar:
+                            if pererabot_k_perem == 0:
+                                self.showDialog('Кол-во деталей ' +  spis[i][3] + ' '  + spis[i][4] +
+                                           '  превышает доступное в цеху, не выданное, без тары: ' + str(bez_tar))
+                                return
 
-                if flag == 0:
-                    if int(spis[i][0]) > bez_tar:
-                        if pererabot_k_perem == 0:
-                            self.showDialog('Кол-во деталей ' +  spis[i][3] + ' '  + spis[i][4] +
-                                       '  превышает доступное в цеху, не выданное, без тары: ' + str(bez_tar))
+                        if tabl_det.currentColumn() > 16 and pererabot_k_perem < int(spis[i][0]):
+                            self.showDialog('Кол-во деталей ' + spis[i][3] + ' ' + spis[i][4] +
+                                       '  превышает доступное в цеху, после обработки: ' + str(pererabot_k_perem))
                             return
 
-                    if tabl_det.currentColumn() > 16 and pererabot_k_perem < int(spis[i][0]):
-                        self.showDialog('Кол-во деталей ' + spis[i][3] + ' ' + spis[i][4] +
-                                   '  превышает доступное в цеху, после обработки: ' + str(pererabot_k_perem))
-                        return
-
-                    if vidano == spis[i][5]:
-                        tmp = self.sost_rabot_po_det_rc_pornom(sp_mk,rab_c,spis[i][11],tabl_det.currentColumn()-15)
-                        if tmp == False:
-                            self.showDialog('Полный объем работ на ' + rab_c + ' для ' + spis[i][3].strip() +
-                                       ' ' + spis[i][4].strip() + ' не выполнен.')
+                        if vidano == spis[i][5]:
+                            tmp = self.sost_rabot_po_det_rc_pornom(sp_mk,rab_c,spis[i][11],tabl_det.currentColumn()-15)
+                            if tmp == False:
+                                self.showDialog('Полный объем работ на ' + rab_c + ' для ' + spis[i][3].strip() +
+                                           ' ' + spis[i][4].strip() + ' не выполнен.')
+                                return
+                    else:
+                        if dost_kol < int(spis[i][0]):
+                            self.showDialog('Кол-во деталей ' + spis[i][3] + ' ' + spis[i][4] +
+                                       '  превышает доступное в РЦ вне маршурта: ' + str(dost_kol))
                             return
-                else:
-                    if dost_kol < int(spis[i][0]):
-                        self.showDialog('Кол-во деталей ' + spis[i][3] + ' ' + spis[i][4] +
-                                   '  превышает доступное в РЦ вне маршурта: ' + str(dost_kol))
-                        return
 
                 s.append([spis[i][0],spis[i][3].strip(),spis[i][4].strip(),spis[i][11].strip()])
         if len(s) == 0:
@@ -711,9 +729,14 @@ class mywindow(QtWidgets.QMainWindow):
         if flag_gotovost_podsborki == True:
             status_tari = 'уровень'
 
+        if flag_ur == True:
+            dop_perem_ur = dop_perem + "-->"
+        else:
+            dop_perem_ur = ''
+
         if flag == 0:
-            sp_tar.append([nom,F.tek_polz(),F.date(2),nom_mk,'',vid_tar,status_tari,"",text_prim.text(),F.tek_polz()+"$"
-                           +F.now()+"$"+ str(tabl_det.currentColumn()-15) + "$" + rab_c])
+            sp_tar.append([nom,F.tek_polz(),F.date(2),nom_mk,'',vid_tar,status_tari,"",text_prim.text(), dop_perem_ur + F.tek_polz()+"$"
+                           + F.now()+"$"+ str(tabl_det.currentColumn()-15) + "$" + rab_c])
         else:
             sp_tar.append(
                 [nom, F.tek_polz(), F.date(2), nom_mk, '', vid_tar, status_tari, "", text_prim.text(), F.tek_polz() + "$"
@@ -755,13 +778,30 @@ class mywindow(QtWidgets.QMainWindow):
                     arr = spis[i][j].split('_')
                     tmp = arr[0]
                     s.append([tmp,0])
+                break
 
 
 
         s5 = copy.deepcopy(s)
         s6 = copy.deepcopy(s)
         s4 = copy.deepcopy(s)
-        s[0][1] = spis[i][5]
+
+        if i < len(spis)-1:
+            if self.uroven(spis[i][3]) >= self.uroven(spis[i+1][3]):
+                s[0][1] = spis[i][5]
+        else:
+            s[0][1] = spis[i][5]
+
+        #ur_tmp = self.uroven(spis[i][3])
+        #flag_gotovo = True
+        #for j in range(i+1,len(spis)):
+        #    if self.uroven(spis[j][3]) == ur_tmp or self.uroven(spis[j][3]) < ur_tmp:
+        #        break
+        #    if spis[j][1] != "Готова":
+        #        flag_gotovo = False
+        #        break
+        #if flag_gotovo == True:
+        #    s[0][1] = spis[i][5]
 
         s3 = copy.deepcopy(s)
         mar = []
@@ -779,12 +819,14 @@ class mywindow(QtWidgets.QMainWindow):
             if mar[i][3] == '0':
                 s2[mar[i][2]] = int(s2[mar[i][2]]) - int(mar[i][0])
             else:
-                s[int(mar[i][3]) - 1][1] = int(s[int(mar[i][3]) - 1][1]) - int(mar[i][0])
+                if int(mar[i][3]) > 0:
+                    s[int(mar[i][3]) - 1][1] = int(s[int(mar[i][3]) - 1][1]) - int(mar[i][0])
 
             if mar[i][5] == '0':
                 s2[mar[i][4]] = int(s2[mar[i][4]]) + int(mar[i][0])
             else:
-                s[int(mar[i][5]) - 1][1] = int(s[int(mar[i][5]) - 1][1]) + int(mar[i][0])
+                if int(mar[i][5]) > 0:
+                    s[int(mar[i][5]) - 1][1] = int(s[int(mar[i][5]) - 1][1]) + int(mar[i][0])
 
             if mar[i][6] == 'закрыта': #в цеху
                 if mar[i][3] == '0':
@@ -925,6 +967,8 @@ class mywindow(QtWidgets.QMainWindow):
 
         bd_arh_tar = F.otkr_f(F.tcfg('arh_tar'), separ='|')
         for i in range(1,len(spisok)):
+            if i == 11:
+                i=i
             s = self.tek_pol_det(spisok[i][11],tabl_mk.item(tabl_mk.currentRow(), 0).text(),'',bd_arh_tar)
             for j in range(16,len(spisok[i])):
                 if tabl_det.item(i-1,j).text().count('_'):
@@ -1005,7 +1049,7 @@ class mywindow(QtWidgets.QMainWindow):
 
         ed_kol = {0}
         F.zapoln_wtabl(self, s, tabl_det, 0, ed_kol,'', '', isp_shapka=True, separ='',ogr_maxshir_kol= 150)
-
+        self.oform_cveta()
         self.dost_ostatok_det(spis_det)
 
 
@@ -1016,7 +1060,7 @@ class mywindow(QtWidgets.QMainWindow):
         tabl_det.setColumnHidden(2,True)
 
         tabl_det.setSelectionMode(1)
-        self.oform_cveta()
+
         self.obn_potok()
 
 
@@ -1052,7 +1096,7 @@ class mywindow(QtWidgets.QMainWindow):
                     if '(полный компл.)' in spis_mk[i][j]:
                         F.ust_color_wtab(tabl_det, i - 1, 16 -koef+ (j- 12)/4 , 0, 254, 0)  # в зеленый
                         if 'Полный' in spis_mk[i][j+1]:
-                            if tabl_det.columnCount() >= int(17 - koef + (j - 12) / 4) and tabl_det.item(i - 1,17 - koef + (j - 12) / 4) != None:
+                            if tabl_det.columnCount() >= int(17 - koef + (j - 12) / 4) and tabl_det.item(i - 1,int(17 - koef + (j - 12) / 4)) != None:
                                 F.ust_color_wtab(tabl_det, i - 1, 17 - koef + (j - 12) / 4, 254, 254, 254)   # в белый
                             else:
                                 tabl_det.item(i - 1,1).setText('Готова')
