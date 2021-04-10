@@ -49,19 +49,14 @@ class mywindow(QtWidgets.QMainWindow):
         #self.resized.connect(self.widths)
 
         tabl_mk = self.ui.table_bd_mk
-        spis_bd_mk = F.otkr_f(F.tcfg('bd_mk'),separ='|')
-        s = []
-        for i in spis_bd_mk:
-            if i[2] != 'Закрыта':
-                s.append(i)
-        F.zapoln_wtabl(self,s,tabl_mk,0,0,'','',isp_shapka=True,separ='')
         tabl_mk.setSelectionBehavior(1)
         tabl_mk.clicked.connect(self.zagruz_det_iz_mk)
         tabl_mk.setSelectionMode(1)
+        self.zapoln_tabl_mk()
         F.ust_cvet_videl_tab(tabl_mk)
 
         push_obnov = self.ui.pushButton_obnov_mk
-        push_obnov.clicked.connect(self.zagruz_det_iz_mk)
+        push_obnov.clicked.connect(self.obnovit_clck)
 
         tabl_tar = self.ui.table_bd_tara
         spis_tar = F.otkr_f(F.scfg('osn_tara') + os.sep + 'osn_Тара.txt', separ='|')
@@ -126,6 +121,26 @@ class mywindow(QtWidgets.QMainWindow):
                 self.dblclk_tab_det()
             else:
                 self.modal = 0
+
+    def obnovit_clck(self):
+        tabl_mk = self.ui.table_bd_mk
+        if tabl_mk.item(tabl_mk.currentRow(),F.nom_kol_po_imen(tabl_mk,'Номер')) != None:
+            nom_mk = tabl_mk.item(tabl_mk.currentRow(),F.nom_kol_po_imen(tabl_mk,'Номер')).text()
+            self.zapoln_tabl_mk()
+            for i in range(tabl_mk.rowCount()):
+                if tabl_mk.item(i,F.nom_kol_po_imen(tabl_mk,'Номер')).text() == nom_mk:
+                    tabl_mk.setCurrentCell(i,0)
+                    break
+        self.zagruz_det_iz_mk()
+
+    def zapoln_tabl_mk(self):
+        tabl_mk = self.ui.table_bd_mk
+        spis_bd_mk = F.otkr_f(F.tcfg('bd_mk'), separ='|')
+        s = []
+        for i in spis_bd_mk:
+            if i[2] != 'Закрыта':
+                s.append(i)
+        F.zapoln_wtabl(self, s, tabl_mk, 0, 0, '', '', isp_shapka=True, separ='')
 
     def showDialog(self, msg):
         msgBox = QtWidgets.QMessageBox()
@@ -454,6 +469,7 @@ class mywindow(QtWidgets.QMainWindow):
             dop = F.tek_polz()+"$"+F.now()+"$0$"+rab_c
             flag = 0
         if tabl_det.currentRow() >= 0:
+
             arr_rab_c = tabl_det.currentItem().text().split('_')
             rab_c = arr_rab_c[0]
             dop = F.tek_polz() + "$" + F.now() + "$" + str(tabl_det.currentColumn() - 15) + "$" + rab_c
@@ -466,6 +482,9 @@ class mywindow(QtWidgets.QMainWindow):
                             F.msgbox('Нельзя переместить вне структуры')
                             return
                         break
+                tabl_det.item(tabl_det.currentRow(),F.nom_kol_po_imen(tabl_det,'Факт.Кол.')).setText(
+                    tabl_det.item(tabl_det.currentRow(), F.nom_kol_po_imen(tabl_det, 'Кол-во')).text()
+                )
                 dop = F.tek_polz() + "$" + F.now() + "$-1$" + rab_c
                 sp_tar = F.otkr_f(F.tcfg('arh_tar'), separ='|')
                 nom_tar = tabl_potok.item(tabl_potok.currentRow(), 0).text()
@@ -477,11 +496,7 @@ class mywindow(QtWidgets.QMainWindow):
                         break
                 F.zap_f(F.tcfg('arh_tar'), sp_tar, '|')
                 tara = tabl_potok.item(tabl_potok.currentRow(), 5).text()
-
                 self.ct_tar(tara,dop)
-
-
-
                 self.obn_potok()
                 self.oform_cveta()
                 self.dost_ostatok_det()
@@ -611,7 +626,6 @@ class mywindow(QtWidgets.QMainWindow):
             return
 
         flag_gotovost_podsborki = None
-
         for i in range(1,len(spis)):
 
             if spis[i][0] != '':
@@ -631,7 +645,8 @@ class mywindow(QtWidgets.QMainWindow):
                                 break
                         for j in range(verh,niz+1):
                             if self.uroven(spis[j][3]) == obr_uroven:
-                                    if spis[j][1] != 'Готова' or spis[j][0] == '':
+                                    if spis[j][1] != 'Готова' or spis[j][0] == '' or \
+                                        spis[j][F.nom_kol_po_im_v_shap('Факт.Кол.')] != spis[j][F.nom_kol_po_im_v_shap('Кол-во')]:
                                         flag_gotovost_podsborki = False
                                         F.msgbox('Не все ДСЕ готовы к пермещению на следующий уровень '
                                                  + spis[j][3] + " " + spis[j][4])
