@@ -469,22 +469,16 @@ class mywindow(QtWidgets.QMainWindow):
             dop = F.tek_polz()+"$"+F.now()+"$0$"+rab_c
             flag = 0
         if tabl_det.currentRow() >= 0:
-
             arr_rab_c = tabl_det.currentItem().text().split('_')
             rab_c = arr_rab_c[0]
             dop = F.tek_polz() + "$" + F.now() + "$" + str(tabl_det.currentColumn() - 15) + "$" + rab_c
             flag = 1
             if tabl_potok.item(tabl_potok.currentRow(), 6).text() == 'уровень':
-                id = tmp_tar[0][3]
-                for i in range(tabl_det.rowCount()):
-                    if tabl_det.item(i, 11).text() == id:
-                        if i != tabl_det.currentRow()+1:
-                            F.msgbox('Нельзя переместить вне структуры')
-                            return
-                        break
-                tabl_det.item(tabl_det.currentRow(),F.nom_kol_po_imen(tabl_det,'Факт.Кол.')).setText(
-                    tabl_det.item(tabl_det.currentRow(), F.nom_kol_po_imen(tabl_det, 'Кол-во')).text()
-                )
+                c_row = tabl_det.currentRow() + 1
+                spis_tabl = F.spisok_iz_wtabl(tabl_det, '', True)
+                if self.vhodit_v_children(c_row,spis_tabl,tmp_tar[0][3]) == False:
+                    F.msgbox('Нельзя переместить вне структуры')
+                    return
                 dop = F.tek_polz() + "$" + F.now() + "$-1$" + rab_c
                 sp_tar = F.otkr_f(F.tcfg('arh_tar'), separ='|')
                 nom_tar = tabl_potok.item(tabl_potok.currentRow(), 0).text()
@@ -495,8 +489,14 @@ class mywindow(QtWidgets.QMainWindow):
                         sp_tar[i][7] = -1
                         break
                 F.zap_f(F.tcfg('arh_tar'), sp_tar, '|')
-                tara = tabl_potok.item(tabl_potok.currentRow(), 5).text()
-                self.ct_tar(tara,dop)
+                self.dost_ostatok_det()
+                spis_tabl = F.spisok_iz_wtabl(tabl_det, '', True)
+                if self.gotovnost_nachat_new_uroven(c_row,spis_tabl) == True:
+                    tara = tabl_potok.item(tabl_potok.currentRow(), 5).text()
+                    tabl_det.item(tabl_det.currentRow(), F.nom_kol_po_imen(tabl_det, 'Факт.Кол.')).setText(
+                        tabl_det.item(tabl_det.currentRow(), F.nom_kol_po_imen(tabl_det, 'Кол-во')).text()
+                    )
+                    self.ct_tar(tara,dop)
                 self.obn_potok()
                 self.oform_cveta()
                 self.dost_ostatok_det()
@@ -581,6 +581,31 @@ class mywindow(QtWidgets.QMainWindow):
         self.dost_ostatok_det()
         return
 
+    def vhodit_v_children(self,c_row,spis_tabl,id):
+        uroven_parent = self.uroven(spis_tabl[c_row][F.nom_kol_po_im_v_shap(spis_tabl, 'Наименование')])
+        for i in range(c_row + 1, len(spis_tabl)):
+            if self.uroven(spis_tabl[i][F.nom_kol_po_im_v_shap(spis_tabl, 'Наименование')]) <= uroven_parent:
+                break
+            if spis_tabl[i][F.nom_kol_po_im_v_shap(spis_tabl, 'ID')] == id:
+                return True
+        return False
+    def gotovnost_nachat_new_uroven(self,c_row,spis_tabl):
+        uroven_parent = self.uroven(spis_tabl[c_row][F.nom_kol_po_im_v_shap(spis_tabl,'Наименование')])
+        for i in range(c_row+1, len(spis_tabl)):
+            if self.uroven(spis_tabl[i][F.nom_kol_po_im_v_shap(spis_tabl,'Наименование')]) <= uroven_parent:
+                break
+            for j in range(len(spis_tabl[i])-1,F.nom_kol_po_im_v_shap(spis_tabl,'Сумм.кол-во'),-1):
+                if spis_tabl[i][j] != "":
+                    if '_' in spis_tabl[i][j]:
+                        arr_tmp = spis_tabl[i][j].split('_')
+                        if arr_tmp[-1] != '0':
+                            return False
+                        else:
+                            break
+        return True
+
+
+
 
     def ct_tar(self,vid_tar = '',dop_perem = ''):
         tabl_mk = self.ui.table_bd_mk
@@ -627,7 +652,6 @@ class mywindow(QtWidgets.QMainWindow):
 
         flag_gotovost_podsborki = None
         for i in range(1,len(spis)):
-
             if spis[i][0] != '':
                 if flag_gotovost_podsborki == None:
                     if spis[i][1] == 'Готова':
@@ -645,11 +669,11 @@ class mywindow(QtWidgets.QMainWindow):
                                 break
                         for j in range(verh,niz+1):
                             if self.uroven(spis[j][3]) == obr_uroven:
-                                    if spis[j][1] != 'Готова' or spis[j][0] == '' or \
-                                        spis[j][F.nom_kol_po_im_v_shap('Факт.Кол.')] != spis[j][F.nom_kol_po_im_v_shap('Кол-во')]:
+                                if spis[j][0] != '' and spis[j][1] == 'Готова':
+                                    if spis[j][F.nom_kol_po_im_v_shap(spis,'Факт.Кол.')] != spis[j][F.nom_kol_po_im_v_shap(spis,'Кол-во')]:
                                         flag_gotovost_podsborki = False
                                         F.msgbox('Не все ДСЕ готовы к пермещению на следующий уровень '
-                                                 + spis[j][3] + " " + spis[j][4])
+                                                     + spis[j][3] + " " + spis[j][4])
                                         return
 
                 if F.is_numeric(spis[i][0]) == False:
@@ -797,6 +821,7 @@ class mywindow(QtWidgets.QMainWindow):
 
 
 
+
         s5 = copy.deepcopy(s)
         s6 = copy.deepcopy(s)
         s4 = copy.deepcopy(s)
@@ -918,6 +943,8 @@ class mywindow(QtWidgets.QMainWindow):
         if rab_c == '':
             return [s,s2,s3,s32,s4,s5,s52,s6] # По маршруту, вне маршрута, s_bez_tar_po_mar, s_bez_tar_vne_mar, Выдано, s_v_tare_po_mar, s_v_tare_vne_mar,s_pererabot_k_perem
         else:
+            if rab_c > len(s):
+                rab_c = len(s)
             return int(s[rab_c][1])
 
     def sost_rabot_po_det_rc_pornom(self,sp,rc,id,kol):
@@ -936,6 +963,8 @@ class mywindow(QtWidgets.QMainWindow):
     def obn_rc_potok(self):
         tabl_rc_potok = self.ui.table_bd_rab_c_potok
         spis = F.otkr_f(F.tcfg('bd_rab_c'),separ='|')
+        shapka = ["Номер",'Наименование',"Кол-во дет.",'Примечание']
+
         tabl_det = self.ui.table_sod_mk
         flag = False
         tabl_mk = self.ui.table_bd_mk
@@ -952,6 +981,8 @@ class mywindow(QtWidgets.QMainWindow):
                 if tabl_rc_potok.item(cell,2).text() != '0':
                     F.ust_color_wtab(tabl_rc_potok,cell,2, 254, 115, 0)
                     flag = True
+        tabl_rc_potok.setHorizontalHeaderLabels(shapka)
+        tabl_rc_potok.resizeColumnsToContents()
         return flag
 
     def obn_potok(self):
@@ -1063,7 +1094,7 @@ class mywindow(QtWidgets.QMainWindow):
         s[0][7] = 'Тек.РЦ'
 
         ed_kol = {0}
-        F.zapoln_wtabl(self, s, tabl_det, 0, ed_kol,'', '', isp_shapka=True, separ='',ogr_maxshir_kol= 150)
+        F.zapoln_wtabl(self, s, tabl_det, 0, ed_kol,'', '', isp_shapka=True, separ='',ogr_maxshir_kol= 150,min_vis_row=20,max_vis_row=25)
         self.oform_cveta()
         self.dost_ostatok_det(spis_det)
 
@@ -1084,9 +1115,18 @@ class mywindow(QtWidgets.QMainWindow):
         tabl_mk = self.ui.table_bd_mk
         nom_mk = tabl_mk.item(tabl_mk.currentRow(), 0).text()
         s = F.spisok_iz_wtabl(tabl_det,'',True)
+        shag = 15
+        maxs = set()
+        for i in range(1, len(s)):
+            maxs.add(self.uroven(s[i][3]))
+        maxc = max(maxs)
         for i in range(1,len(s)):
             for j in range(1, len(s[i])):
                 F.ust_color_wtab(tabl_det,i-1,j,233,233,233)   #все в серый
+        for i in range(1,len(s)):
+            uroven = self.uroven(s[i][3])
+            for j in range(0, len(s[i])):
+                F.dob_color_wtab(tabl_det,i-1,j,0,0,shag*maxc-shag*uroven)
 
 
         for i in range(1, len(s)):
